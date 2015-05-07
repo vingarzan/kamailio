@@ -233,7 +233,7 @@ mod_list_all=$(sort $(mod_list_basic) $(mod_list_extra) \
 # no external compile or link dependencies
 module_group_default=$(mod_list_basic) $(mod_list_extra) \
 					  $(mod_list_db) $(mod_list_dbuid) \
-					  $(mod_list_devel)
+					  $(mod_list_devel) $(mod_list_ims)
 
 # Modules in this group are the default compiled modules due to
 # no internal/external compile or link dependencies
