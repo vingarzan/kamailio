@@ -101,7 +101,7 @@ CREATE TABLE `version` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-05-08 11:06:19
+-- Dump completed on 2015-05-08 11:37:40
 -- MySQL dump 10.13  Distrib 5.5.43, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: pcscf_db
@@ -142,6 +142,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `version` WRITE;
 /*!40000 ALTER TABLE `version` DISABLE KEYS */;
+INSERT INTO `version` VALUES ('location',6);
 /*!40000 ALTER TABLE `version` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -154,7 +155,7 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-05-08 11:06:19
+-- Dump completed on 2015-05-08 11:37:40
 # DB access rights
 grant delete,insert,select,update on pcscf_db.* to pcscf@localhost identified by 'pcscf';
 grant delete,insert,select,update on pcscf_db.* to provisioning@localhost identified by 'provi';

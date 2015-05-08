@@ -26,6 +26,48 @@ CREATE DATABASE /*!32312 IF NOT EXISTS*/ `scscf_db` /*!40100 DEFAULT CHARACTER S
 USE `scscf_db`;
 
 --
+-- Table structure for table `active_watchers`
+--
+
+DROP TABLE IF EXISTS `active_watchers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `active_watchers` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `presentity_uri` varchar(128) NOT NULL,
+  `watcher_username` varchar(64) NOT NULL,
+  `watcher_domain` varchar(64) NOT NULL,
+  `to_user` varchar(64) NOT NULL,
+  `to_domain` varchar(64) NOT NULL,
+  `event` varchar(64) NOT NULL DEFAULT 'presence',
+  `event_id` varchar(64) DEFAULT NULL,
+  `to_tag` varchar(64) NOT NULL,
+  `from_tag` varchar(64) NOT NULL,
+  `callid` varchar(255) NOT NULL,
+  `local_cseq` int(11) NOT NULL,
+  `remote_cseq` int(11) NOT NULL,
+  `contact` varchar(128) NOT NULL,
+  `record_route` text,
+  `expires` int(11) NOT NULL,
+  `status` int(11) NOT NULL DEFAULT '2',
+  `reason` varchar(64) NOT NULL,
+  `version` int(11) NOT NULL DEFAULT '0',
+  `socket_info` varchar(64) NOT NULL,
+  `local_contact` varchar(128) NOT NULL,
+  `from_user` varchar(64) NOT NULL,
+  `from_domain` varchar(64) NOT NULL,
+  `updated` int(11) NOT NULL,
+  `updated_winfo` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `active_watchers_idx` (`callid`,`to_tag`,`from_tag`),
+  KEY `active_watchers_expires` (`expires`),
+  KEY `active_watchers_pres` (`presentity_uri`,`event`),
+  KEY `updated_idx` (`updated`),
+  KEY `updated_winfo_idx` (`updated_winfo`,`presentity_uri`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `contact`
 --
 
@@ -101,6 +143,67 @@ CREATE TABLE `impu_subscriber` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `presentity`
+--
+
+DROP TABLE IF EXISTS `presentity`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `presentity` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `username` varchar(64) NOT NULL,
+  `domain` varchar(64) NOT NULL,
+  `event` varchar(64) NOT NULL,
+  `etag` varchar(64) NOT NULL,
+  `expires` int(11) NOT NULL,
+  `received_time` int(11) NOT NULL,
+  `body` blob NOT NULL,
+  `sender` varchar(128) NOT NULL,
+  `priority` int(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `presentity_idx` (`username`,`domain`,`event`,`etag`),
+  KEY `presentity_expires` (`expires`),
+  KEY `account_idx` (`username`,`domain`,`event`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `pua`
+--
+
+DROP TABLE IF EXISTS `pua`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `pua` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `pres_uri` varchar(128) NOT NULL,
+  `pres_id` varchar(255) NOT NULL,
+  `event` int(11) NOT NULL,
+  `expires` int(11) NOT NULL,
+  `desired_expires` int(11) NOT NULL,
+  `flag` int(11) NOT NULL,
+  `etag` varchar(64) NOT NULL,
+  `tuple_id` varchar(64) DEFAULT NULL,
+  `watcher_uri` varchar(128) NOT NULL,
+  `call_id` varchar(255) NOT NULL,
+  `to_tag` varchar(64) NOT NULL,
+  `from_tag` varchar(64) NOT NULL,
+  `cseq` int(11) NOT NULL,
+  `record_route` text,
+  `contact` varchar(128) NOT NULL,
+  `remote_contact` varchar(128) NOT NULL,
+  `version` int(11) NOT NULL,
+  `extra_headers` text NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `pua_idx` (`etag`,`tuple_id`,`call_id`,`from_tag`),
+  KEY `expires_idx` (`expires`),
+  KEY `dialog1_idx` (`pres_id`,`pres_uri`),
+  KEY `dialog2_idx` (`call_id`,`from_tag`),
+  KEY `record_idx` (`pres_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `subscriber`
 --
 
@@ -139,6 +242,52 @@ CREATE TABLE `version` (
   UNIQUE KEY `table_name_idx` (`table_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `watchers`
+--
+
+DROP TABLE IF EXISTS `watchers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `watchers` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `presentity_uri` varchar(128) NOT NULL,
+  `watcher_username` varchar(64) NOT NULL,
+  `watcher_domain` varchar(64) NOT NULL,
+  `event` varchar(64) NOT NULL DEFAULT 'presence',
+  `status` int(11) NOT NULL,
+  `reason` varchar(64) DEFAULT NULL,
+  `inserted_time` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `watcher_idx` (`presentity_uri`,`watcher_username`,`watcher_domain`,`event`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `xcap`
+--
+
+DROP TABLE IF EXISTS `xcap`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `xcap` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `username` varchar(64) NOT NULL,
+  `domain` varchar(64) NOT NULL,
+  `doc` mediumblob NOT NULL,
+  `doc_type` int(11) NOT NULL,
+  `etag` varchar(64) NOT NULL,
+  `source` int(11) NOT NULL,
+  `doc_uri` varchar(255) NOT NULL,
+  `port` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `doc_uri_idx` (`doc_uri`),
+  KEY `account_doc_type_idx` (`username`,`domain`,`doc_type`),
+  KEY `account_doc_type_uri_idx` (`username`,`domain`,`doc_type`,`doc_uri`),
+  KEY `account_doc_uri_idx` (`username`,`domain`,`doc_uri`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -149,7 +298,7 @@ CREATE TABLE `version` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-05-08 11:04:19
+-- Dump completed on 2015-05-08 11:38:00
 -- MySQL dump 10.13  Distrib 5.5.43, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: scscf_db
@@ -174,6 +323,15 @@ CREATE TABLE `version` (
 CREATE DATABASE /*!32312 IF NOT EXISTS*/ `scscf_db` /*!40100 DEFAULT CHARACTER SET latin1 */;
 
 USE `scscf_db`;
+
+--
+-- Dumping data for table `active_watchers`
+--
+
+LOCK TABLES `active_watchers` WRITE;
+/*!40000 ALTER TABLE `active_watchers` DISABLE KEYS */;
+/*!40000 ALTER TABLE `active_watchers` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Dumping data for table `contact`
@@ -212,6 +370,24 @@ LOCK TABLES `impu_subscriber` WRITE;
 UNLOCK TABLES;
 
 --
+-- Dumping data for table `presentity`
+--
+
+LOCK TABLES `presentity` WRITE;
+/*!40000 ALTER TABLE `presentity` DISABLE KEYS */;
+/*!40000 ALTER TABLE `presentity` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Dumping data for table `pua`
+--
+
+LOCK TABLES `pua` WRITE;
+/*!40000 ALTER TABLE `pua` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pua` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Dumping data for table `subscriber`
 --
 
@@ -226,7 +402,35 @@ UNLOCK TABLES;
 
 LOCK TABLES `version` WRITE;
 /*!40000 ALTER TABLE `version` DISABLE KEYS */;
+INSERT INTO `version` VALUES ('active_watchers',11);
+INSERT INTO `version` VALUES ('contact',6);
+INSERT INTO `version` VALUES ('impu',6);
+INSERT INTO `version` VALUES ('impu_contact',6);
+INSERT INTO `version` VALUES ('impu_subscriber',6);
+INSERT INTO `version` VALUES ('presentity',4);
+INSERT INTO `version` VALUES ('pua',7);
+INSERT INTO `version` VALUES ('subscriber',6);
+INSERT INTO `version` VALUES ('watchers',3);
+INSERT INTO `version` VALUES ('xcap',4);
 /*!40000 ALTER TABLE `version` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Dumping data for table `watchers`
+--
+
+LOCK TABLES `watchers` WRITE;
+/*!40000 ALTER TABLE `watchers` DISABLE KEYS */;
+/*!40000 ALTER TABLE `watchers` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Dumping data for table `xcap`
+--
+
+LOCK TABLES `xcap` WRITE;
+/*!40000 ALTER TABLE `xcap` DISABLE KEYS */;
+/*!40000 ALTER TABLE `xcap` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -238,7 +442,7 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-05-08 11:04:20
+-- Dump completed on 2015-05-08 11:38:01
 # DB access rights
 grant delete,insert,select,update on scscf_db.* to scscf@localhost identified by 'scscf';
 grant delete,insert,select,update on scscf_db.* to provisioning@localhost identified by 'provi';
