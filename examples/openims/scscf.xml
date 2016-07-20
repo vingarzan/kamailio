@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DiameterPeer
+  FQDN="scscf-aaa.ims.mnc001.mcc001.3gppnetwork.org"
+  Realm="ims.mnc001.mcc001.3gppnetwork.org"
+  Vendor_Id="45569"
+  Product_Name="OpenIMS/OpenEPC-7b"
+  AcceptUnknownPeers="1"
+  DropUnknownOnDisconnect="1"
+  Tc="30"
+  Workers="4"
+  QueueLength="8">
+
+  <Peer FQDN="hss.epc.mnc001.mcc001.3gppnetwork.org" Realm="epc.mnc001.mcc001.3gppnetwork.org" port="3868"/>
+  <!--<Peer FQDN="cdf.epc.mnc001.mcc001.3gppnetwork.org" Realm="epc.mnc001.mcc001.3gppnetwork.org" port="3868"/> -->
+
+  <Acceptor port="3868" bind="192.168.254.47"/>
+
+  <Auth id="16777216" vendor="10415"/>  <!-- 3GPP Cx -->
+  <Auth id="16777216" vendor="4491"/>   <!-- CableLabs Cx -->
+  <Auth id="16777216" vendor="13019"/>  <!-- ETSI/TISPAN Cx -->
+  <Acct id="3" />                       <!-- 3GPP Rf -->
+
+  <Realm name="ims.mnc001.mcc001.3gppnetwork.org">
+    <Route FQDN="hss.epc.mnc001.mcc001.3gppnetwork.org" metric="13"/>
+  </Realm>
+  <Realm name="epc.mnc001.mcc001.3gppnetwork.org">
+    <Route FQDN="hss.epc.mnc001.mcc001.3gppnetwork.org" metric="13"/>
+  </Realm>
+  <DefaultRoute FQDN="hss.epc.mnc001.mcc001.3gppnetwork.org" metric="10"/>
+</DiameterPeer>

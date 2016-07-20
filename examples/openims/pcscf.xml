@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DiameterPeer
+  FQDN="pcscf-aaa.ims.mnc001.mcc001.3gppnetwork.org"
+  Realm="ims.mnc001.mcc001.3gppnetwork.org"
+  Vendor_Id="45569"
+  Product_Name="OpenIMSCore/OpenEPC-7b"
+  AcceptUnknownPeers="1"
+  DropUnknownOnDisconnect="1"
+  Tc="30"
+  Workers="4"
+  QueueLength="8"
+>
+  <Peer FQDN="pcrf.epc.mnc001.mcc001.3gppnetwork.org" Realm="epc.mnc001.mcc001.3gppnetwork.org" port="3868"/>
+  <Peer FQDN="cdf.epc.mnc001.mcc001.3gppnetwork.org"  Realm="epc.mnc001.mcc001.3gppnetwork.org" port="3868"/>
+
+  <Acceptor port="3868" bind="192.168.254.45"/>
+
+  <Auth id="16777236" vendor="10415"/> <!-- 3GPP -->
+  <Auth id="16777236" vendor="0"/>     <!-- 3GPP Rx -->
+  <Acct id="3" />                      <!-- 3GPP Rf -->
+
+  <Realm name="ims.mnc001.mcc001.3gppnetwork.org">
+    <Route FQDN="pcrf.epc.mnc001.mcc001.3gppnetwork.org" metric="13"/>
+  </Realm>
+  <Realm name="epc.mnc001.mcc001.3gppnetwork.org">
+    <Route FQDN="pcrf.epc.mnc001.mcc001.3gppnetwork.org" metric="13"/>
+    <Route FQDN="cdf.epc.mnc001.mcc001.3gppnetwork.org" metric="13"/>
+  </Realm>
+  <DefaultRoute FQDN="pcrf.epc.mnc001.mcc001.3gppnetwork.org" metric="10"/>
+  <DefaultRoute FQDN="cdf.epc.mnc001.mcc001.3gppnetwork.org" metric="10"/>
+</DiameterPeer>
