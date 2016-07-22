@@ -425,7 +425,10 @@ inline int rx_add_media_component_description_avp(AAAMessage *msg, int number, s
 
 		/*media-sub-component*/
 		if (dlg_direction != DLG_MOBILE_ORIGINATING) {
-				media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport->s, ipA, portA, ipB, portB);
+				if (!(media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport->s, ipA, portA, ipB, portB))) {
+					LM_ERR("Error, failed to create media subcomponent avp. \n");
+					return 0;
+				}
 				cdpb.AAAAddAVPToList(&list, media_sub_component[media_sub_component_number]);
 		} else {
 				media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport->s, ipB, portB, ipA, portA);
@@ -691,8 +694,11 @@ AAA_AVP *rx_create_media_subcomponent_avp(int number, char* proto,
 			proto_nr = "17";
 		} else if (strcasecmp(proto,"TCP") == 0) {
 			proto_nr = "6";
+		} else if (memcmp(proto, "RTP", 3) == 0) {
+			proto_nr = "17";
+			LOG(L_NOTICE, "Protocol RTP [%,*s] \n", 3, proto);
 		} else {
-			LOG(L_ERR, "Not yet implemented for protocol %s\n", proto);
+			LOG(L_NOTICE, "Not yet implemented for protocol [%s] \n", proto);
 			return 0;
 		}
 		int proto_len = strlen(proto_nr);
