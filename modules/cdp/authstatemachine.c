@@ -732,7 +732,7 @@ void Send_ASA(cdp_session_t* s, AAAMessage* msg) {
 	if (!s) {
 		//send an ASA for UNKNOWN_SESSION_ID - use AAASendMessage()
 		// msg is the ASR received
-		asa = AAANewMessage(IMS_ASA, 0, 0, msg);
+		asa = AAANewMessage(IMS_ASA, msg->applicationId, 0, msg);
 		if (!asa) return;
 
 		set_4bytes(x, AAA_SUCCESS);
@@ -742,7 +742,7 @@ void Send_ASA(cdp_session_t* s, AAAMessage* msg) {
 	} else {
 		// send... many cases... maybe not needed.
 		// for now we do the same
-		asa = AAANewMessage(IMS_ASA, 0, 0, msg);
+		asa = AAANewMessage(IMS_ASA, msg->applicationId, 0, msg);
 		if (!asa) return;
 
 		set_4bytes(x, AAA_SUCCESS);
