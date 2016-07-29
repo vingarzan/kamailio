@@ -696,7 +696,7 @@ AAA_AVP *rx_create_media_subcomponent_avp(int number, char* proto,
 			proto_nr = "6";
 		} else if (memcmp(proto, "RTP", 3) == 0) {
 			proto_nr = "17";
-			LOG(L_NOTICE, "Protocol RTP [%,*s] \n", 3, proto);
+			LOG(L_NOTICE, "Protocol RTP [%.*s] \n", 3, proto);
 		} else {
 			LOG(L_NOTICE, "Not yet implemented for protocol [%s] \n", proto);
 			return 0;
