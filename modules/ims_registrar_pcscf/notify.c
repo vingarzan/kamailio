@@ -16,15 +16,15 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
- * along with this program; if not, write to the Free Software 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
- * 
+ *
  * * History:
  * ========
- * 
+ *
  * Nov 2013 Richard Good migrated pua_reginfo funtionality to ims_registrar_pcscf
- * 
+ *
  */
 
 #include "notify.h"
@@ -168,7 +168,7 @@ int process_contact(udomain_t * _d, int expires, str contact_uri, int contact_st
 
         memcpy(bufport, port, received_port_len);
         bufport[received_port_len]=0;
-        
+
         ci.received_host.s = val;
         ci.received_host.len = port - val - 1;
         LM_DBG("Setting received host in search to [%.*s]\n", ci.received_host.len, ci.received_host.s);
@@ -187,17 +187,17 @@ int process_contact(udomain_t * _d, int expires, str contact_uri, int contact_st
             ret = RESULT_CONTACTS_FOUND;
             goto done;
         }
-        LM_WARN("This contact: <%.*s> is in state active and is not in usrloc - must be another contact on a different P so going to ignore\n", contact_uri.len, contact_uri.s);
-        //		LM_DBG("This contact: <%.*s> is in state active and is not in usrloc so adding it to usrloc, expires: %d which is in %d seconds\n", contact_uri.len, contact_uri.s, expires, expires-local_time_now);
-        //		if (ul.insert_pcontact(_d, &contact_uri, &ci, &pcontact) != 0) {
-        //			LM_ERR("Failed inserting new pcontact\n");
-        //			ret = RESULT_ERROR;
-        //			goto done;
-        //		} else {
-        //			//register for callbacks on this contact so we can send PUBLISH to SCSCF should status change
-        //			LM_DBG("registering for UL callback\n");
-        //			ul.register_ulcb(pcontact, PCSCF_CONTACT_DELETE | PCSCF_CONTACT_EXPIRE, callback_pcscf_contact_cb, NULL);
-        //		}
+        //LM_WARN("This contact: <%.*s> is in state active and is not in usrloc - must be another contact on a different P so going to ignore\n", contact_uri.len, contact_uri.s);
+        		LM_DBG("This contact: <%.*s> is in state active and is not in usrloc so adding it to usrloc, expires: %d which is in %d seconds\n", contact_uri.len, contact_uri.s, expires, expires-local_time_now);
+        		if (ul.insert_pcontact(_d, &contact_uri, &ci, &pcontact) != 0) {
+        			LM_ERR("Failed inserting new pcontact\n");
+        			ret = RESULT_ERROR;
+        			goto done;
+        		} else {
+        			//register for callbacks on this contact so we can send PUBLISH to SCSCF should status change
+        			LM_DBG("registering for UL callback\n");
+        			ul.register_ulcb(pcontact, PCSCF_CONTACT_DELETE | PCSCF_CONTACT_EXPIRE, callback_pcscf_contact_cb, NULL);
+        		}
     } else {//contact exists
         if (contact_state == STATE_TERMINATED) {
             //delete contact
@@ -460,7 +460,7 @@ next_contact:
         }
 
 next_registration:
-        // if (ul_record) ul.release_urecord(ul_record);		
+        // if (ul_record) ul.release_urecord(ul_record);
         /* Unlock the domain for this AOR: */
         //if (aor_key.len > 0)
         //	ul.unlock_udomain(domain, &aor_key);
@@ -478,7 +478,7 @@ int reginfo_handle_notify(struct sip_msg* msg, char* domain, char* s2) {
     LM_DBG("Handling notify\n");
     str body;
     int result = 1;
-    
+
     if(subscribe_to_reginfo != 1){
         LM_ERR("Received a NOTIFY for reg-info but I have not SUBSCRIBED for them.  Ignoring");
         return -1;
