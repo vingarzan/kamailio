@@ -229,7 +229,7 @@ error:
  * @param acct_id - the accounting application id
  * @returns 1 on success or 0 on error
  */
-inline int rx_add_vendor_specific_appid_avp(AAAMessage *msg, unsigned int vendor_id,
+inline static int rx_add_vendor_specific_appid_avp(AAAMessage *msg, unsigned int vendor_id,
 		unsigned int auth_id, unsigned int acct_id)
 {
 		AAA_AVP_LIST list;
@@ -363,7 +363,7 @@ int rx_add_subscription_id_avp(AAAMessage *msg, str identifier, int identifier_t
 				__FUNCTION__);
 }
 
-inline unsigned int sdp_b_value(str * payload, char * subtype)
+inline static unsigned int sdp_b_value(str * payload, char * subtype)
 {
 		char * line;
 		unsigned int i;
@@ -425,7 +425,10 @@ inline int rx_add_media_component_description_avp(AAAMessage *msg, int number, s
 
 		/*media-sub-component*/
 		if (dlg_direction != DLG_MOBILE_ORIGINATING) {
-				media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport->s, ipA, portA, ipB, portB);
+				if (!(media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport->s, ipA, portA, ipB, portB))) {
+					LM_ERR("Error, failed to create media subcomponent avp. \n");
+					return 0;
+				}
 				cdpb.AAAAddAVPToList(&list, media_sub_component[media_sub_component_number]);
 		} else {
 				media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport->s, ipB, portB, ipA, portA);
@@ -634,14 +637,14 @@ static str permit_in = {"permit in ", 10};
 static str from_s = {" from ", 6};
 static str to_s = {" to ", 4};
 //removed final %s - this is options which Rx 29.214 says will not be used for flow-description AVP
-static char * permit_out_with_ports = "permit out %i from %.*s %u to %.*s %u";
-static char * permit_out_with_any_as_dst = "permit out %i from %.*s %u to any";
-//static char * permit_out_with_any_as_src = "permit out %i from any to %.*s %u";
-//static char * permit_out_with_ports = "permit out %i from %.*s %u to %.*s %u %s";
-static char * permit_in_with_ports = "permit in %i from %.*s %u to %.*s %u";
-static char * permit_in_with_any_as_src = "permit in %i from any to %.*s %u";
-//static char * permit_in_with_any_as_dst = "permit in %i from %.*s %u to any";
-//static char * permit_in_with_ports = "permit in %i from %.*s %u to %.*s %u %s";
+static char * permit_out_with_ports = "permit out %s from %.*s %u to %.*s %u";
+static char * permit_out_with_any_as_dst = "permit out %s from %.*s %u to any";
+//static char * permit_out_with_any_as_src = "permit out %s from any to %.*s %u";
+//static char * permit_out_with_ports = "permit out %s from %.*s %u to %.*s %u %s";
+static char * permit_in_with_ports = "permit in %s from %.*s %u to %.*s %u";
+static char * permit_in_with_any_as_src = "permit in %s from any to %.*s %u";
+//static char * permit_in_with_any_as_dst = "permit in %s from %.*s %u to any";
+//static char * permit_in_with_ports = "permit in %s from %.*s %u to %.*s %u %s";
 
 static unsigned int flowdata_buflen = 0;
 static str flowdata_buf = {0, 0};
@@ -684,9 +687,21 @@ AAA_AVP *rx_create_media_subcomponent_avp(int number, char* proto,
 		list.tail = 0;
 		list.head = 0;
 		char x[4];
-		int proto_int = 0, proto_len = 0;
-
-		proto_int = 17;
+		char *proto_nr = 0;
+		if (strcasecmp(proto,"IP") == 0) {
+			proto_nr = "ip";
+		} else if (strcasecmp(proto,"UDP") == 0) {
+			proto_nr = "17";
+		} else if (strcasecmp(proto,"TCP") == 0) {
+			proto_nr = "6";
+		} else if (memcmp(proto, "RTP", 3) == 0) {
+			proto_nr = "17";
+			LOG(L_NOTICE, "Protocol RTP [%,*s] \n", 3, proto);
+		} else {
+			LOG(L_NOTICE, "Not yet implemented for protocol [%s] \n", proto);
+			return 0;
+		}
+		int proto_len = strlen(proto_nr);
 
 		int intportA = atoi(portA->s);
 		int intportB = atoi(portB->s);
@@ -749,14 +764,14 @@ AAA_AVP *rx_create_media_subcomponent_avp(int number, char* proto,
 		/*IMS Flow descriptions*/
 		/*first flow is the receive flow*/
 		if (!useAnyForIpA && !useAnyForIpB) {
-				flowdata_buf.len = snprintf(flowdata_buf.s, len, permit_out_with_ports, proto_int,
+				flowdata_buf.len = snprintf(flowdata_buf.s, len, permit_out_with_ports, proto_nr,
 						ipA->len, ipA->s, intportA,
 						ipB->len, ipB->s, intportB);
 		} else if (useAnyForIpA) {
-				flowdata_buf.len = snprintf(flowdata_buf.s, len, permit_out_with_any_as_dst, proto_int,
+				flowdata_buf.len = snprintf(flowdata_buf.s, len, permit_out_with_any_as_dst, proto_nr,
 						ipB->len, ipB->s, intportB);
 		} else if (useAnyForIpB) {
-				flowdata_buf.len = snprintf(flowdata_buf.s, len, permit_out_with_any_as_dst, proto_int,
+				flowdata_buf.len = snprintf(flowdata_buf.s, len, permit_out_with_any_as_dst, proto_nr,
 						ipA->len, ipA->s, intportA);
 		}
 
@@ -783,14 +798,14 @@ AAA_AVP *rx_create_media_subcomponent_avp(int number, char* proto,
 		}
 
 		if (!useAnyForIpA && !useAnyForIpB) {
-				flowdata_buf.len = snprintf(flowdata_buf.s, len2, permit_in_with_ports, proto_int,
+				flowdata_buf.len = snprintf(flowdata_buf.s, len2, permit_in_with_ports, proto_nr,
 						ipB->len, ipB->s, intportB,
 						ipA->len, ipA->s, intportA);
 		} else if (useAnyForIpA) {
-				flowdata_buf.len = snprintf(flowdata_buf.s, len2, permit_in_with_any_as_src, proto_int,
+				flowdata_buf.len = snprintf(flowdata_buf.s, len2, permit_in_with_any_as_src, proto_nr,
 						ipB->len, ipB->s, intportB);
 		} else if (useAnyForIpB) {
-				flowdata_buf.len = snprintf(flowdata_buf.s, len2, permit_in_with_any_as_src, proto_int,
+				flowdata_buf.len = snprintf(flowdata_buf.s, len2, permit_in_with_any_as_src, proto_nr,
 						ipA->len, ipA->s, intportA);
 		}
 

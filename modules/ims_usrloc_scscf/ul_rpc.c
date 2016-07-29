@@ -184,27 +184,90 @@ static void ul_rpc_dump(rpc_t* rpc, void* ctx)
 	udomain_t* dom;
 	void* th;
 	void* sh;
+	void* ah;
+	void* ih;
 	int max, n, i;
+	struct impurecord *c = 0;
+	reg_subscriber *s = 0;
+	time_t now = time(0);
 
 	for( dl=root ; dl ; dl=dl->next ) {
 		dom = dl->d;
-		if (rpc->add(ctx, "{", &th) < 0)
-		{
+		if (rpc->add(ctx, "{", &th) < 0) {
 			rpc->fault(ctx, 500, "Internal error creating top rpc");
 			return;
 		}
-		if(rpc->struct_add(th, "Sd",
-					"Domain",  &dl->name,
-					"Size",    (int)dom->size)<0)
-		{
+
+		if(rpc->struct_add(th, "Sd", "Domain",  &dl->name, "Size", (int)dom->size) < 0) {
 			rpc->fault(ctx, 500, "Internal error creating inner struct");
 			return;
 		}
 
-		for(i=0,n=0,max=0; i<dom->size; i++) {
+		for (i = 0, n = 0, max = 0; i < dom->size; i++) {
 			n += dom->table[i].n;
-			if(max<dom->table[i].n)
-				max= dom->table[i].n;
+			if (max < dom->table[i].n) {
+				max = dom->table[i].n;
+			}
+			for (c = dom->table[i].first; c; c = c->next) {
+				if (rpc->struct_add(th, "{", "Public Identities", &ih) < 0) {
+					unlock_ulslot(dom, i);
+					rpc->fault(ctx, 500, "Internal error creating IMPU struct");
+					return;
+				}
+
+				if (rpc->struct_add(ih, "S", "IMPU ", &c->public_identity) < 0) {
+					rpc->fault(ctx, 500, "Internal error creating IMPU struct");
+					return;
+				}
+
+				if (rpc->struct_add(ih, "S", "IMPI ", &c->private_identity) < 0) {
+					rpc->fault(ctx, 500, "Internal error creating IMPI struct");
+					return;
+				}
+
+				if (rpc->struct_add(ih, "s", "State ", get_impu_regstate_as_string(c->reg_state)) < 0) {
+					rpc->fault(ctx, 500, "Internal error creating state struct");
+					return;
+				}
+
+				if (rpc->struct_add(ih, "d", "IMPU Record Expires ", (int) c->expires) < 0) {
+					rpc->fault(ctx, 500, "Internal error creating Expires struct");
+					return;
+				}
+
+				if (rpc->struct_add(ih, "d", "IMPU IS Primary ", (int) c->is_primary) < 0) {
+					rpc->fault(ctx, 500, "Internal error creating Is Primary struct");
+					return;
+				}
+
+				if (rpc->struct_add(ih, "S", "IMS Subscription ", c->s) < 0) {
+					rpc->fault(ctx, 500, "Internal error creating IMS Subscription struct");
+					return;
+				}
+
+				for (s = c->shead; s; s=s->next) {
+					if (rpc->struct_add(ih, "{", "Subscriber", &ah) < 0) {
+						rpc->fault(ctx, 500, "Internal error creating Subscriber struct");
+						return;
+					}
+
+					if (rpc->struct_add(ah, "S", "Watcher Contact ", &s->watcher_contact) < 0) {
+						rpc->fault(ctx, 500, "Internal error creating Watcher Contact struct");
+						return;
+					}
+
+					if (rpc->struct_add(ah, "S", "Watcher URI ", &s->watcher_uri) < 0) {
+						rpc->fault(ctx, 500, "Internal error creating Watcher URI struct");
+						return;
+					}
+
+					if (rpc->struct_add(ah, "d", "Expires ", (int) s->expires - now) < 0) {
+						rpc->fault(ctx, 500, "Internal error creating Expires struct");
+						return;
+					}
+
+				}
+			}
 		}
 
 		/* extra attributes node */
