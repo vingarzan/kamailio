@@ -49,7 +49,7 @@
 /*
  * Find credentials with given realm in a SIP message header
  */
-inline int ims_find_credentials(struct sip_msg* _m, str* _realm,
+int ims_find_credentials(struct sip_msg* _m, str* _realm,
 		hdr_types_t _hftype, struct hdr_field** _h) {
 	struct hdr_field** hook, *ptr, *prev;
 	hdr_flags_t hdr_flags;

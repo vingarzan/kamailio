@@ -331,7 +331,7 @@ static str commit = str_init("COMMIT");
 static str rollback = str_init("ROLLBACK");
 static str autocommit_on = str_init("SET AUTOCOMMIT=1");
 
-static inline void start_dbtransaction() {
+void start_dbtransaction() {
     
     if (db_mode == NO_DB) 
         return;
@@ -356,7 +356,7 @@ static inline void start_dbtransaction() {
  * the record, delete the expired ones from memory.
  * \param _r processed record
  */
-static inline void process_impurecord(impurecord_t* _r) {
+void process_impurecord(impurecord_t* _r) {
     int flag, mustdeleteimpu = 1, n, k;
     unsigned int sl;
     ucontact_t* ptr;
@@ -584,7 +584,7 @@ int delete_scontact(struct ucontact* _c) {
 }
 
 /* function to convert contact aor to only have data after @ - ie strip user part */
-inline int aor_to_contact(str* aor, str* contact) {
+int aor_to_contact(str* aor, str* contact) {
     char* p;
     int ret = 0; //success
 
@@ -617,7 +617,7 @@ inline int aor_to_contact(str* aor, str* contact) {
  * \param _c contact string
  * \return ptr on successfull match, 0 when they not match
  */
-static inline struct ucontact* contact_match(unsigned int slot, str* _c) {
+struct ucontact* contact_match(unsigned int slot, str* _c) {
     ucontact_t* ptr = contact_list->slot[slot].first;
 
     while (ptr) {
@@ -635,7 +635,7 @@ static inline struct ucontact* contact_match(unsigned int slot, str* _c) {
  * \param _c contact string
  * \return ptr on successfull match, 0 when they not match
  */
-static inline struct ucontact* contact_port_ip_match(unsigned int slot, str* _c) {
+struct ucontact* contact_port_ip_match(unsigned int slot, str* _c) {
     ucontact_t* ptr = contact_list->slot[slot].first;
     str string_ip_port, contact_ip_port;
     aor_to_contact(_c, &string_ip_port); //strip userpart from test contact
@@ -660,7 +660,7 @@ static inline struct ucontact* contact_port_ip_match(unsigned int slot, str* _c)
  * \param _callid callid
  * \return ptr on successfull match, 0 when they not match
  */
-static inline struct ucontact* contact_callid_match(unsigned int slot,
+struct ucontact* contact_callid_match(unsigned int slot,
         str* _c, str *_callid) {
     ucontact_t* ptr = contact_list->slot[slot].first;
 
@@ -683,7 +683,7 @@ static inline struct ucontact* contact_callid_match(unsigned int slot,
 + * \param _path path
 + * \return ptr on successfull match, 0 when they not match
 + */
-static inline struct ucontact* contact_path_match(unsigned int slot, str* _c, str *_path) {
+struct ucontact* contact_path_match(unsigned int slot, str* _c, str *_path) {
     ucontact_t* ptr = contact_list->slot[slot].first;
     /* if no path is preset (in REGISTER request) or use_path is not configured
        in registrar module, default to contact_match() */

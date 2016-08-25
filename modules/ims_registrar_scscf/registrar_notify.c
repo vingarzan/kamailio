@@ -103,7 +103,7 @@ extern char *domain;
  * RFC allows only value less or equal to the one provided by UAC.
  */
 
-static inline int randomize_expires(int expires, int range) {
+int randomize_expires(int expires, int range) {
     /* if no range is given just return expires */
     if (range == 0) return expires;
 
@@ -1513,7 +1513,7 @@ static str param_sip_instance = {"+sip.instance", 13};
 static str param_3gpp_smsip = {"+g.3gpp.smsip", 13};
 static str param_3gpp_icsi_ref = {"+g.3gpp.icsi-ref", 16};
 
-int inline supported_param(str *param_name) {
+int supported_param(str *param_name) {
 
     if (strncasecmp(param_name->s, param_q.s, param_name->len) == 0) {
         return 0;

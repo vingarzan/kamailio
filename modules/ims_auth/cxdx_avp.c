@@ -65,7 +65,7 @@ static str s_empty = {0, 0};
  * @param func - the name of the calling function, for debugging purposes
  * @returns 1 on success or 0 on failure
  */
-static inline int cxdx_add_avp(AAAMessage *m,char *d,int len,int avp_code,
+int cxdx_add_avp(AAAMessage *m,char *d,int len,int avp_code,
 	int flags,int vendorid,int data_do,const char *func)
 {
 	AAA_AVP *avp;
@@ -95,7 +95,7 @@ static inline int cxdx_add_avp(AAAMessage *m,char *d,int len,int avp_code,
  * @param func - the name of the calling function, for debugging purposes
  * @returns 1 on success or 0 on failure
  */
-static inline int cxdx_add_avp_list(AAA_AVP_LIST *list,char *d,int len,int avp_code,
+int cxdx_add_avp_list(AAA_AVP_LIST *list,char *d,int len,int avp_code,
 	int flags,int vendorid,int data_do,const char *func)
 {
 	AAA_AVP *avp;
@@ -128,7 +128,7 @@ static inline int cxdx_add_avp_list(AAA_AVP_LIST *list,char *d,int len,int avp_c
  * @param func - the name of the calling function, for debugging purposes
  * @returns the str with the payload on success or an empty string on failure
  */
-static inline str cxdx_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
+str cxdx_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
 							const char *func)
 {
 	AAA_AVP *avp;
@@ -149,7 +149,7 @@ static inline str cxdx_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_destination_realm(AAAMessage *msg,str data)
+int cxdx_add_destination_realm(AAAMessage *msg,str data)
 {
 	return 
 	cxdx_add_avp(msg,data.s,data.len,
@@ -166,7 +166,7 @@ inline int cxdx_add_destination_realm(AAAMessage *msg,str data)
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_destination_host(AAAMessage *msg,str data)
+int cxdx_add_destination_host(AAAMessage *msg,str data)
 {
 	return 
 	cxdx_add_avp(msg,data.s,data.len,
@@ -185,7 +185,7 @@ inline int cxdx_add_destination_host(AAAMessage *msg,str data)
  * @param acct_id - the accounting application id
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_vendor_specific_appid(AAAMessage *msg,unsigned int vendor_id,
+int cxdx_add_vendor_specific_appid(AAAMessage *msg,unsigned int vendor_id,
 	unsigned int auth_id,unsigned int acct_id)
 {
 	AAA_AVP_LIST list;
@@ -243,7 +243,7 @@ inline int cxdx_add_vendor_specific_appid(AAAMessage *msg,unsigned int vendor_id
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_auth_session_state(AAAMessage *msg,unsigned int data)
+int cxdx_add_auth_session_state(AAAMessage *msg,unsigned int data)
 {
 	char x[4];
 	set_4bytes(x,data);
@@ -262,7 +262,7 @@ inline int cxdx_add_auth_session_state(AAAMessage *msg,unsigned int data)
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_user_name(AAAMessage *msg,str data)
+int cxdx_add_user_name(AAAMessage *msg,str data)
 {
 	return 
 	cxdx_add_avp(msg,data.s,data.len,
@@ -279,7 +279,7 @@ inline int cxdx_add_user_name(AAAMessage *msg,str data)
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_public_identity(AAAMessage *msg,str data)
+int cxdx_add_public_identity(AAAMessage *msg,str data)
 {
 	return 
 	cxdx_add_avp(msg,data.s,data.len,
@@ -296,7 +296,7 @@ inline int cxdx_add_public_identity(AAAMessage *msg,str data)
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_visited_network_id(AAAMessage *msg,str data)
+int cxdx_add_visited_network_id(AAAMessage *msg,str data)
 {
 	return 
 	cxdx_add_avp(msg,data.s,data.len,
@@ -313,7 +313,7 @@ inline int cxdx_add_visited_network_id(AAAMessage *msg,str data)
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_UAR_flags(AAAMessage *msg, unsigned int sos_reg)
+int cxdx_add_UAR_flags(AAAMessage *msg, unsigned int sos_reg)
 {
 
 	char x[4];
@@ -337,7 +337,7 @@ inline int cxdx_add_UAR_flags(AAAMessage *msg, unsigned int sos_reg)
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_authorization_type(AAAMessage *msg,unsigned int data)
+int cxdx_add_authorization_type(AAAMessage *msg,unsigned int data)
 {
 	char x[4];
 	set_4bytes(x,data);
@@ -355,7 +355,7 @@ inline int cxdx_add_authorization_type(AAAMessage *msg,unsigned int data)
  * @param msg - the Diameter message
  * @returns the AVP payload on success or an empty string on error
  */
-inline int cxdx_get_result_code(AAAMessage *msg, int *data)
+int cxdx_get_result_code(AAAMessage *msg, int *data)
 {
 	str s;
 	s = cxdx_get_avp(msg,
@@ -372,7 +372,7 @@ inline int cxdx_get_result_code(AAAMessage *msg, int *data)
  * @param msg - the Diameter message
  * @returns the AVP payload on success or an empty string on error
  */
-inline int cxdx_get_experimental_result_code(AAAMessage *msg, int *data)
+int cxdx_get_experimental_result_code(AAAMessage *msg, int *data)
 {
 	AAA_AVP_LIST list;
 	AAA_AVP *avp;
@@ -402,7 +402,7 @@ inline int cxdx_get_experimental_result_code(AAAMessage *msg, int *data)
  * @param msg - the Diameter message
  * @returns the AVP payload on success or an empty string on error
  */
-inline str cxdx_get_server_name(AAAMessage *msg)
+str cxdx_get_server_name(AAAMessage *msg)
 {	
 	return cxdx_get_avp(msg,
 		AVP_IMS_Server_Name,
@@ -419,7 +419,7 @@ inline str cxdx_get_server_name(AAAMessage *msg)
  * @param o_cnt - size of the array above to be filled
  * @returns 1 on success 0 on fail
  */
-inline int cxdx_get_capabilities(AAAMessage *msg,int **m,int *m_cnt,int **o,int *o_cnt,
+int cxdx_get_capabilities(AAAMessage *msg,int **m,int *m_cnt,int **o,int *o_cnt,
 	str **p,int *p_cnt)
 {
 	AAA_AVP_LIST list;
@@ -513,7 +513,7 @@ int cscf_reply_transactional(struct sip_msg *msg, int code, char *text)
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_sip_number_auth_items(AAAMessage *msg,unsigned int data)
+int cxdx_add_sip_number_auth_items(AAAMessage *msg,unsigned int data)
 {
 	char x[4];
 	set_4bytes(x,data);
@@ -533,7 +533,7 @@ inline int cxdx_add_sip_number_auth_items(AAAMessage *msg,unsigned int data)
  * @param auth - the value for the authorization AVP
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_sip_auth_data_item_request(AAAMessage *msg, str auth_scheme, str auth, str username, str realm,str method, str server_name)
+int cxdx_add_sip_auth_data_item_request(AAAMessage *msg, str auth_scheme, str auth, str username, str realm,str method, str server_name)
 {
 	AAA_AVP_LIST list;
 	str group;
@@ -594,7 +594,7 @@ inline int cxdx_add_sip_auth_data_item_request(AAAMessage *msg, str auth_scheme,
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_server_name(AAAMessage *msg,str data)
+int cxdx_add_server_name(AAAMessage *msg,str data)
 {
 	return 
 	cxdx_add_avp(msg,data.s,data.len,
@@ -610,7 +610,7 @@ inline int cxdx_add_server_name(AAAMessage *msg,str data)
  * @param msg - the Diameter message
  * @returns the number or 0 on error
  */
-inline int cxdx_get_sip_number_auth_items(AAAMessage *msg, int *data)
+int cxdx_get_sip_number_auth_items(AAAMessage *msg, int *data)
 {
 	str s;
 	s = cxdx_get_avp(msg,
@@ -919,7 +919,7 @@ str cxdx_ETSI_sip_authorization(str username, str realm, str nonce, str URI, str
  * @returns the AVP payload on success or an empty string on error
  */
 
-inline str cxdx_get_user_data(AAAMessage *msg)
+str cxdx_get_user_data(AAAMessage *msg)
 {	
 	return cxdx_get_avp(msg,
 		AVP_IMS_User_Data_Cx,
@@ -932,7 +932,7 @@ inline str cxdx_get_user_data(AAAMessage *msg)
  * @param msg - the Diameter message
  * @returns the AVP payload on success or an empty string on error
  */
-inline int cxdx_get_charging_info(AAAMessage *msg,str *ccf1,str *ccf2,str *ecf1,str *ecf2)
+int cxdx_get_charging_info(AAAMessage *msg,str *ccf1,str *ccf2,str *ecf1,str *ecf2)
 {		
 	AAA_AVP_LIST list;
 	AAA_AVP *avp;
@@ -977,7 +977,7 @@ inline int cxdx_get_charging_info(AAAMessage *msg,str *ccf1,str *ccf2,str *ecf1,
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_server_assignment_type(AAAMessage *msg,unsigned int data)
+int cxdx_add_server_assignment_type(AAAMessage *msg,unsigned int data)
 {
 	char x[4];
 	set_4bytes(x,data);
@@ -996,7 +996,7 @@ inline int cxdx_add_server_assignment_type(AAAMessage *msg,unsigned int data)
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_userdata_available(AAAMessage *msg,unsigned int data)
+int cxdx_add_userdata_available(AAAMessage *msg,unsigned int data)
 {
 	char x[4];
 	set_4bytes(x,data);
@@ -1018,7 +1018,7 @@ inline int cxdx_add_userdata_available(AAAMessage *msg,unsigned int data)
  * @param func - the name of the calling function for debugging purposes
  * @returns the AVP payload on success or an empty string on error
  */
-inline AAA_AVP* cxdx_get_next_public_identity(AAAMessage *msg,AAA_AVP* pos,int avp_code,int vendor_id,const char *func)
+AAA_AVP* cxdx_get_next_public_identity(AAAMessage *msg,AAA_AVP* pos,int avp_code,int vendor_id,const char *func)
 {		
 	AAA_AVP *avp;
 	
@@ -1036,7 +1036,7 @@ inline AAA_AVP* cxdx_get_next_public_identity(AAAMessage *msg,AAA_AVP* pos,int a
  * @param msg - the Diameter message
  * @returns the AVP payload on success or an empty string on error
  */
-inline str cxdx_get_user_name(AAAMessage *msg)
+str cxdx_get_user_name(AAAMessage *msg)
 {
 	return cxdx_get_avp(msg,
 		AVP_User_Name,
@@ -1050,7 +1050,7 @@ inline str cxdx_get_user_name(AAAMessage *msg)
  * @param data - the value for the AVP payload
  * @returns 1 on success or 0 on error
  */
-inline int cxdx_add_result_code(AAAMessage *msg,unsigned int data)
+int cxdx_add_result_code(AAAMessage *msg,unsigned int data)
 {
 	char x[4];
 	set_4bytes(x,data);
