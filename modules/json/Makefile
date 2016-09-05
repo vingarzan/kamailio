@@ -12,7 +12,7 @@ JLIB=json
 
 BUILDER = $(shell which pkg-config)
 ifeq ($(BUILDER),)
-	JSONC=$(shell ls $(SYSBASE)/include/lib/libjson*.so $(LOCALBASE)/lib/libjson*.so 2>/dev/null | grep json-c)
+	JSONC=$(shell ls $(SYSBASE)/include/lib/libjson*.so $(LOCALBASE)/lib/libjson*.so /lib/x86_64-linux-gnu/libjson*.so.* 2>/dev/null | grep json-c)
 else
 	JSONC=$(shell pkg-config --libs json-c 2>/dev/null | grep json-c)
 endif
@@ -22,9 +22,9 @@ ifneq ($(JSONC),)
 endif
 
 ifeq ($(BUILDER),)
-	DEFS+=-I/usr/include/$(JLIB) -I$(LOCALBASE)/include/$(JLIB) \
+	DEFS+=-I/usr/include/$(JLIB) -I$(LOCALBASE)/include/$(JLIB) -I/usr/include/json-c \
        -I$(LOCALBASE)/include
-	LIBS+=-L$(SYSBASE)/include/lib -L$(LOCALBASE)/lib -l$(JLIB)
+	LIBS+=-L$(SYSBASE)/include/lib -L$(LOCALBASE)/lib -L/lib/x86_64-linux-gnu/ -l$(JLIB)
 else
 	DEFS+= $(shell pkg-config --cflags $(JLIB))
 	LIBS+= $(shell pkg-config --libs $(JLIB))
