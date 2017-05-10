@@ -2,6 +2,8 @@
  * fast architecture specific locking
  *
  * Copyright (C) 2001-2003 FhG Fokus
+ * 
+ * Copyright (C) 2017 Core Network Dynamics for ARM8 (aarch64) support
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -73,6 +75,12 @@ typedef  volatile int fl_lock_t;
 #define membar_getlock()/* no need for a compiler barrier, already included */
 
 #elif defined __CPU_arm || defined __CPU_arm6
+#ifndef NOSMP
+#warning smp not supported on arm* (no membars), try compiling with -DNOSMP
+#endif /* NOSMP */
+#define membar_getlock() 
+
+#elif defined(__CPU_aarch64)
 #ifndef NOSMP
 #warning smp not supported on arm* (no membars), try compiling with -DNOSMP
 #endif /* NOSMP */
@@ -191,6 +199,20 @@ inline static int tsl(fl_lock_t* lock)
 			 * lock is taken) => it's safe to return %0 */
 			: "=&r"(val), "=m"(*lock) : "r"(lock), "r"(1) : "cc"
 	);
+
+#elif defined __CPU_aarch64
+  int res = 0;
+  int one = 1;
+  asm volatile(
+      "1: ldaxr %w0, %2 \n\t"
+      "   stlxr %w1, %w3, %2 \n\t"
+      "   cbnz %w1, 1b \n\t"
+          : "=&r" (val), "=&r" (res), "+Q"(*lock)
+          : "r"(one)
+          : "cc", "memory"
+  );
+
+
 #elif defined(__CPU_ppc) || defined(__CPU_ppc64)
 	asm volatile(
 			"1: \n\t"
@@ -340,6 +362,19 @@ inline static void release_lock(fl_lock_t* lock)
 		" str %1, [%2] \n\r" 
 		: "=m"(*lock) : "r"(0), "r"(lock) : "memory"
 	);
+
+#elif defined __CPU_aarch64
+#ifndef NOSMP
+#warning arm* smp mode not supported (no membars), try compiling with -DNOSMP
+#endif
+  asm volatile(
+      " stlr %w1, %0 \n\t"
+      : "=Q"(*lock)
+      : "r"(0)
+      : "memory"
+  );
+
+
 #elif defined(__CPU_ppc) || defined(__CPU_ppc64)
 	asm volatile(
 			/* "sync\n\t"  lwsync is faster and will work
