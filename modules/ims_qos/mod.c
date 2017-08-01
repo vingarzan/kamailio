@@ -1264,7 +1264,7 @@ static int w_rx_aar_register(struct sip_msg *msg, char* route, char* str1, char*
 				goto error;
 		}
 
-		recv_port = msg->rcv.src_port;
+		recv_port = msg->rcv.dst_port;
 		recv_proto = msg->rcv.proto;
 
 		LM_DBG("Message received IP address is: [%.*s]\n", recv_ip.len, recv_ip.s);

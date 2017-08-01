@@ -424,7 +424,7 @@ inline int rx_add_media_component_description_avp(AAAMessage *msg, int number, s
 		}
 
 		/*media-sub-component*/
-		if (dlg_direction != DLG_MOBILE_ORIGINATING) {
+		if (dlg_direction == DLG_MOBILE_ORIGINATING) {
 				media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport, ipA, portA, ipB, portB);
 				cdpb.AAAAddAVPToList(&list, media_sub_component[media_sub_component_number]);
 		} else {
