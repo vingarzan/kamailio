@@ -100,7 +100,8 @@ AAAMessage* rx_process_asr(AAAMessage *request) {
     } else {
         LM_DBG("This is a normal media bearer -  bearer is releaed by CDP callbacks\n");
     }
-    cdpb.AAASessionsUnlock(session->hash);
+    cdpb.AAADropAuthSession(session);
+    //cdpb.AAASessionsUnlock(session->hash);
     return 0;
 }
 
