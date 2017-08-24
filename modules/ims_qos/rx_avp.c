@@ -423,15 +423,26 @@ inline int rx_add_media_component_description_avp(AAAMessage *msg, int number, s
 				return 0;
 		}
 
-		/*media-sub-component*/
-		if (dlg_direction == DLG_MOBILE_ORIGINATING) {
-				media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport, ipA, portA, ipB, portB);
+		/*media-sub-component DLG_MOBILE_ORIGINATING*/
+		if (dlg_direction == DLG_MOBILE_TERMINATING) {
+		  LM_NOTICE("DLG : DLG_MOBILE_TERMINATING IPA : [%.*s] PortA : [%.*s] IPB : [%.*s] PortB : [%.*s] \n",
+		            ipA->len, ipA->s, portA->len, portA->s, ipB->len, ipB->s, portB->len, portB->s);
+		  media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport, ipA, portA, ipB, portB);
 				cdpb.AAAAddAVPToList(&list, media_sub_component[media_sub_component_number]);
+		} else if (dlg_direction == DLG_MOBILE_ORIGINATING) {
+		  LM_NOTICE("DLG : DLG_MOBILE_ORIGINATING IPA : [%.*s] PortA : [%.*s] IPB : [%.*s] PortB : [%.*s] \n",
+		            ipA->len, ipA->s, portA->len, portA->s, ipB->len, ipB->s, portB->len, portB->s);
+		  media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport, ipB, portB, ipA, portA);
+				cdpb.AAAAddAVPToList(&list, media_sub_component[media_sub_component_number]);
+		} else if (dlg_direction == DLG_MOBILE_REGISTER) {
+		  LM_NOTICE("DLG : DLG_MOBILE_REGISTER IPA : [%.*s] PortA : [%.*s] IPB : [%.*s] PortB : [%.*s] \n",
+		            ipA->len, ipA->s, portA->len, portA->s, ipB->len, ipB->s, portB->len, portB->s);
+		  media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport, ipB, portB, ipA, portA);
+		  cdpb.AAAAddAVPToList(&list, media_sub_component[media_sub_component_number]);
 		} else {
-				media_sub_component[media_sub_component_number] = rx_create_media_subcomponent_avp(number, transport, ipB, portB, ipA, portA);
-				cdpb.AAAAddAVPToList(&list, media_sub_component[media_sub_component_number]);
+		  LM_ERR("Error, unknown dlg direction : [%u] \n", dlg_direction);
+		  return 0;
 		}
-
 
 		/*media type*/
 		if (strncmp(media_description->s, "audio", 5) == 0) {
