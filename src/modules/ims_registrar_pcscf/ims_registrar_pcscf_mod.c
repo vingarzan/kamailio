@@ -301,14 +301,13 @@ static int mod_init(void)
 	bind_ipsec_pcscf =
 			(bind_ipsec_pcscf_t)find_export("bind_ims_ipsec_pcscf", 1, 0);
 	if(!bind_ipsec_pcscf) {
-		LM_ERR("can't bind ims_ipsec_pcscf\n");
-		return -1;
+		LM_WARN("can't bind ims_ipsec_pcscf - will start without\n");
+	} else {
+		if(bind_ipsec_pcscf(&ipsec_pcscf) < 0) {
+			return -1;
+		}
+		LM_INFO("Successfully bound to PCSCF IPSEC module\n");
 	}
-
-	if(bind_ipsec_pcscf(&ipsec_pcscf) < 0) {
-		return -1;
-	}
-	LM_INFO("Successfully bound to PCSCF IPSEC module\n");
 
 	if(subscribe_to_reginfo == 1) {
 		/* Bind to PUA: */

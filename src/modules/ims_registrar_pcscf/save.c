@@ -297,11 +297,13 @@ static inline int update_contacts(struct sip_msg *req, struct sip_msg *rpl,
 							LM_DBG("ul.register_ulcb(pcontact, "
 								   "PCSCF_CONTACT_EXPIRE|PCSCF_CONTACT_DELETE.."
 								   ".)\n");
-							if(ul.register_ulcb(pcontact,
-									   PCSCF_CONTACT_EXPIRE
-											   | PCSCF_CONTACT_DELETE,
-									   ipsec_pcscf.ipsec_on_expire, NULL)
-									!= 1) {
+							if(ipsec_pcscf.ipsec_on_expire != NULL
+									&& ul.register_ulcb(pcontact,
+											   PCSCF_CONTACT_EXPIRE
+													   | PCSCF_CONTACT_DELETE,
+											   ipsec_pcscf.ipsec_on_expire,
+											   NULL)
+											   != 1) {
 								LM_DBG("Error subscribing for contact\n");
 							}
 
