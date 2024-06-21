@@ -235,8 +235,27 @@ pcontact_t *getContactP(struct sip_msg *_m, udomain_t *_d,
 		   "[%d://%.*s:%d]\n",
 			proto, host.len, host.s, port);
 
-	received_host.len = ip_addr2sbuf(&_m->rcv.src_ip, srcip, sizeof(srcip));
-	received_host.s = srcip;
+	if(trust_bottom_via && vb->received && vb->received->value.len > 0) {
+		received_host = vb->received->value;
+	} else {
+		received_host.len = ip_addr2sbuf(&_m->rcv.src_ip, srcip, sizeof(srcip));
+		received_host.s = srcip;
+	}
+	unsigned short received_port = 0;
+	if(trust_bottom_via && vb->rport && vb->rport->value.len > 0) {
+		received_port = atoi(vb->rport->value.s);
+	} else {
+		received_port = _m->rcv.src_port;
+	}
+	if(received_port == 0) {
+		received_port = 5060;
+	}
+	char received_proto = 0;
+	if(trust_bottom_via && vb->proto) {
+		received_proto = vb->proto;
+	} else {
+		received_proto = _m->rcv.proto;
+	}
 
 	//    if (_m->id != current_msg_id) {
 	current_msg_id = _m->id;
@@ -246,8 +265,8 @@ pcontact_t *getContactP(struct sip_msg *_m, udomain_t *_d,
 	search_ci.reg_state = reg_state;
 	search_ci.received_host.s = received_host.s;
 	search_ci.received_host.len = received_host.len;
-	search_ci.received_port = _m->rcv.src_port;
-	search_ci.received_proto = _m->rcv.proto;
+	search_ci.received_port = received_port;
+	search_ci.received_proto = received_proto;
 	search_ci.searchflag = SEARCH_RECEIVED;
 	search_ci.num_service_routes = 0;
 	if(is_registered_fallback2ip == 1) {
