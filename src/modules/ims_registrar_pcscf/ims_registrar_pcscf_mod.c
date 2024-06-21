@@ -86,6 +86,8 @@ int ignore_reg_state = 0;
 /**!< ignore port checks between received port on message and registration received port.
  * this is useful for example if you register with UDP but possibly send invite over TCP (message too big) */
 int ignore_contact_rxport_check = 0;
+/** If set, this uses the bottom Via for identification of UE, always, on both requests and responses, over Contact. */
+int trust_bottom_via = 0;
 
 time_t time_now;
 
@@ -191,6 +193,7 @@ static param_export_t params[] = {{"pcscf_uri", PARAM_STR, &pcscf_uri},
 		{"reginfo_queue_size_threshold", INT_PARAM,
 				&reginfo_queue_size_threshold},
 		{"delete_delay", PARAM_INT, &_imsregp_params.delete_delay},
+		{"trust_bottom_via", PARAM_INT, &trust_bottom_via},
 		//	{"store_profile_dereg",	INT_PARAM, &store_data_on_dereg},
 		{0, 0, 0}};
 

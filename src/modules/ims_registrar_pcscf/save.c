@@ -60,6 +60,7 @@ extern time_t time_now;
 extern unsigned int pending_reg_expires;
 extern int subscribe_to_reginfo;
 extern int subscription_expires;
+extern int trust_bottom_via;
 extern pua_api_t pua;
 extern ipsec_pcscf_api_t ipsec_pcscf;
 
@@ -176,7 +177,20 @@ static inline int update_contacts(struct sip_msg *req, struct sip_msg *rpl,
 				ci.searchflag =
 						SEARCH_NORMAL; /* this must be reset for each contact iteration */
 
-				if(puri.params.len > 6
+				if (trust_bottom_via) {
+					struct via_body *vb = cscf_get_last_via(req);
+					if (vb == 0) {
+						LM_ERR("No via header in request\n");
+						return -1;
+					}
+					ci.received_host = vb->host;
+					ci.received_port = vb->port;
+					ci.received_proto = vb->proto; // this actually doesn't matter, since IMS UEs register IPs for both
+					ci.searchflag = SEARCH_RECEIVED;
+					LM_DBG("bottom Via from request: Via sent-by host [%.*s], port [%d], proto [%d]\n",
+							ci.received_host.len, ci.received_host.s,
+							ci.received_port, ci.received_proto);
+				} else if(puri.params.len > 6
 						&& (alias_start = _strnistr(
 									puri.params.s, "alias=", puri.params.len))
 								   != NULL) {
@@ -321,8 +335,8 @@ int save_pending(struct sip_msg *_m, udomain_t *_d)
 	struct sip_uri parsed_received;
 	char srcip[50];
 	memset(&ci, 0, sizeof(struct pcontact_info));
-
-	vb = cscf_get_ue_via(_m);
+		
+	vb = trust_bottom_via ? cscf_get_last_via(_m) : cscf_get_ue_via(_m);
 	port = vb->port ? vb->port : 5060;
 	proto = vb->proto;
 

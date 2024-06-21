@@ -116,6 +116,8 @@ str regex_sdp_ip_prefix_to_maintain_in_fd = {0, 0};
 //If set this will include an additional filter for all existing filters using the next odd port up - as this is the RTCP port
 int include_rtcp_fd = 0;
 
+/** If set, this uses the bottom Via for identification of UE, always, on both requests and responses, over Contact. */int trust_bottom_via = 0;
+
 int cdp_event_list_size_threshold =
 		0; /**Threshold for size of cdp event list after which a warning is logged */
 
@@ -258,6 +260,7 @@ static param_export_t params[] = {{"rx_dest_realm", PARAM_STR, &rx_dest_realm},
 		{"suspend_transaction", INT_PARAM, &_ims_qos_suspend_transaction},
 		{"recv_mode", PARAM_INT, &_imsqos_params.recv_mode},
 		{"dialog_direction", PARAM_INT, &_imsqos_params.dlg_direction},
+		{"trust_bottom_via", PARAM_INT, &trust_bottom_via},
 		{0, 0, 0}};
 
 
@@ -1412,7 +1415,7 @@ static int w_rx_aar_register(
 		}
 	}
 
-	vb = cscf_get_ue_via(msg);
+	vb = trust_bottom_via ? cscf_get_last_via(msg) : cscf_get_ue_via(msg);
 	via_port = vb->port ? vb->port : 5060;
 	via_proto = vb->proto;
 

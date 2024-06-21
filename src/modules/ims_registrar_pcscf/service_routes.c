@@ -41,6 +41,7 @@ static pcontact_t *c = NULL;
 
 extern usrloc_api_t ul;
 extern int ignore_contact_rxport_check;
+extern int trust_bottom_via;
 static str *asserted_identity;
 static str *registration_contact;
 
@@ -199,7 +200,7 @@ pcontact_t *getContactP(struct sip_msg *_m, udomain_t *_d,
 	b = cscf_parse_contacts(_m);
 
 	if(_m->first_line.type == SIP_REPLY && _m->contact && _m->contact->parsed
-			&& b->contacts) {
+			&& b->contacts && !trust_bottom_via) {
 		mustRetryViaSearch = 1;
 		mustRetryReceivedSearch = 1;
 		LM_DBG("This is a reply - to look for contact we favour the contact "
@@ -224,7 +225,7 @@ pcontact_t *getContactP(struct sip_msg *_m, udomain_t *_d,
 		else
 			LM_DBG("This is a request - using first via to find contact\n");
 
-		vb = cscf_get_ue_via(_m);
+		vb = trust_bottom_via ? cscf_get_last_via(_m) : cscf_get_ue_via(_m);
 		host = vb->host;
 		port = vb->port ? vb->port : 5060;
 		proto = vb->proto;
@@ -351,7 +352,7 @@ tryagain:
 	if(!c && mustRetryViaSearch) {
 		LM_DBG("This is a reply so we will search using the last via once "
 			   "more...\n");
-		vb = cscf_get_ue_via(_m);
+		vb = cscf_get_ue_via(_m); // if trust_bottom_via was set, we wouldn't get here, hence this remains as is.
 		search_ci.via_host = vb->host;
 		search_ci.via_port = vb->port ? vb->port : 5060;
 		search_ci.via_prot = vb->proto;
@@ -396,7 +397,7 @@ int check_service_routes(struct sip_msg *_m, udomain_t *_d)
 
 	//	LM_DBG("Got %i Route-Headers.\n", c->num_service_routes);
 
-	vb = cscf_get_ue_via(_m);
+	vb = trust_bottom_via ? cscf_get_last_via(_m) : cscf_get_ue_via(_m);
 	port = vb->port ? vb->port : 5060;
 	proto = vb->proto;
 
@@ -597,7 +598,7 @@ int force_service_routes(struct sip_msg *_m, udomain_t *_d)
 	/* we need to be sure we have seen all HFs */
 	parse_headers(_m, HDR_EOH_F, 0);
 
-	vb = cscf_get_ue_via(_m);
+	vb = trust_bottom_via ? cscf_get_last_via(_m) : cscf_get_ue_via(_m);
 	port = vb->port ? vb->port : 5060;
 	proto = vb->proto;
 
