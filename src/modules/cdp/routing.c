@@ -185,83 +185,12 @@ peer *get_first_connected_route(
 	return p;
 }
 
-/**
- * Get the first connect peer that matches the routing mechanisms.
- * - First the Destination-Host AVP value is tried if connected (the peer does not have to
- * be in the routing table at all).
- * - Then we look for a connected peer in the specific realm for the Destination-Realm AVP
- * - Then we look for the first connected peer in the default routes
- * @param m - the Diameter message to find the destination peer for
- * @returns - the connected peer or null if none connected found
- */
-peer *get_routing_peer(cdp_session_t *cdp_session, AAAMessage *m)
+
+peer *get_routing_peer_by_app_id(cdp_session_t *cdp_session,
+		str destination_realm, int app_id, int vendor_id)
 {
-	str destination_realm = {0, 0}, destination_host = {0, 0};
-	AAA_AVP *avp, *avp_vendor, *avp2;
-	AAA_AVP_LIST group;
 	peer *p;
 	routing_realm *rr;
-	int app_id = 0, vendor_id = 0;
-
-	LM_DBG("getting diameter routing peer for realm: [%.*s]\n",
-			m->dest_realm->data.len, m->dest_realm->data.s);
-
-	app_id = m->applicationId;
-	avp = AAAFindMatchingAVP(
-			m, 0, AVP_Vendor_Specific_Application_Id, 0, AAA_FORWARD_SEARCH);
-	if(avp) {
-		group = AAAUngroupAVPS(avp->data);
-		avp_vendor =
-				AAAFindMatchingAVPList(group, group.head, AVP_Vendor_Id, 0, 0);
-		avp2 = AAAFindMatchingAVPList(
-				group, group.head, AVP_Auth_Application_Id, 0, 0);
-		if(avp_vendor && avp2) {
-			vendor_id = get_4bytes(avp_vendor->data.s);
-			app_id = get_4bytes(avp2->data.s);
-		}
-		avp2 = AAAFindMatchingAVPList(
-				group, group.head, AVP_Acct_Application_Id, 0, 0);
-		if(avp_vendor && avp2) {
-			vendor_id = get_4bytes(avp_vendor->data.s);
-			app_id = get_4bytes(avp2->data.s);
-		}
-		AAAFreeAVPList(&group);
-	}
-
-	avp_vendor = AAAFindMatchingAVP(m, 0, AVP_Vendor_Id, 0, AAA_FORWARD_SEARCH);
-	avp = AAAFindMatchingAVP(
-			m, 0, AVP_Auth_Application_Id, 0, AAA_FORWARD_SEARCH);
-	if(avp && avp_vendor) {
-		vendor_id = get_4bytes(avp_vendor->data.s);
-		app_id = get_4bytes(avp->data.s);
-	}
-
-	avp = AAAFindMatchingAVP(
-			m, 0, AVP_Acct_Application_Id, 0, AAA_FORWARD_SEARCH);
-	if(avp && avp_vendor) {
-		vendor_id = get_4bytes(avp_vendor->data.s);
-		app_id = get_4bytes(avp->data.s);
-	}
-
-	avp = AAAFindMatchingAVP(m, 0, AVP_Destination_Host, 0, AAA_FORWARD_SEARCH);
-	if(avp)
-		destination_host = avp->data;
-
-	if(destination_host.len) {
-		/* There is a destination host present in the message try and route directly there */
-		p = get_peer_by_fqdn(&destination_host);
-		if(p && (p->state == I_Open || p->state == R_Open)
-				&& peer_handles_application(p, app_id, vendor_id)) {
-			p->last_selected = time(NULL);
-			return p;
-		}
-		/* the destination host peer is not connected at the moment, try a normal route then */
-	}
-
-	avp = AAAFindMatchingAVP(
-			m, 0, AVP_Destination_Realm, 0, AAA_FORWARD_SEARCH);
-	if(avp)
-		destination_realm = avp->data;
 
 	if(!config->r_table) {
 		LM_ERR("get_routing_peer(): Empty routing table.\n");
@@ -282,8 +211,9 @@ peer *get_routing_peer(cdp_session_t *cdp_session, AAAMessage *m)
 			if(p)
 				return p;
 			else
-				LM_ERR("get_routing_peer(): No connected Route peer found for "
-					   "Realm <%.*s>. Trying DefaultRoutes next...\n",
+				LM_WARN("get_routing_peer_by_app_id(): No connected Route peer "
+						"found for Realm <%.*s>. Trying DefaultRoutes "
+						"next...\n",
 						destination_realm.len, destination_realm.s);
 		}
 	}
@@ -293,9 +223,117 @@ peer *get_routing_peer(cdp_session_t *cdp_session, AAAMessage *m)
 	p = get_first_connected_route(
 			cdp_session, config->r_table->routes, app_id, vendor_id);
 	if(!p) {
-		LM_ERR("get_routing_peer(): No connected DefaultRoute peer found for "
-			   "app_id %d and vendor id %d.\n",
+		LM_WARN("get_routing_peer_by_app_id(): No connected DefaultRoute peer "
+				"found for app_id %d and vendor id %d.\n",
 				app_id, vendor_id);
 	}
 	return p;
+}
+
+/**
+ * Get the first connect peer that matches the routing mechanisms.
+ * - First the Destination-Host AVP value is tried if connected (the peer does not have to
+ * be in the routing table at all).
+ * - Then we look for a connected peer in the specific realm for the Destination-Realm AVP
+ * - Then we look for the first connected peer in the default routes
+ * @param m - the Diameter message to find the destination peer for
+ * @returns - the connected peer or null if none connected found
+ */
+peer *get_routing_peer(cdp_session_t *cdp_session, AAAMessage *m)
+{
+	str destination_realm = {0, 0}, destination_host = {0, 0};
+	AAA_AVP *avp, *avp_vendor, *avp2;
+	AAA_AVP_LIST group;
+	peer *p;
+	int app_id = 0, vendor_id = 0;
+
+	avp = AAAFindMatchingAVP(m, 0, AVP_Destination_Host, 0, AAA_FORWARD_SEARCH);
+	if(avp)
+		destination_host = avp->data;
+
+	if(destination_host.len) {
+		/* There is a destination host present in the message try and route directly there */
+		p = get_peer_by_fqdn(&destination_host);
+		if(p && (p->state == I_Open || p->state == R_Open)
+				&& peer_handles_application(p, app_id, vendor_id)) {
+			p->last_selected = time(NULL);
+			return p;
+		}
+		/* the destination host peer is not connected at the moment, try a normal route then */
+	}
+
+	if(!config->r_table) {
+		LM_ERR("get_routing_peer(): Empty routing table.\n");
+		return 0;
+	}
+
+	LM_DBG("getting diameter routing peer for realm: [%.*s]\n",
+			m->dest_realm->data.len, m->dest_realm->data.s);
+	avp = AAAFindMatchingAVP(
+			m, 0, AVP_Destination_Realm, 0, AAA_FORWARD_SEARCH);
+	if(avp)
+		destination_realm = avp->data;
+
+	app_id = m->applicationId;
+	avp = AAAFindMatchingAVP(
+			m, 0, AVP_Vendor_Specific_Application_Id, 0, AAA_FORWARD_SEARCH);
+	if(avp) {
+		group = AAAUngroupAVPS(avp->data);
+		avp_vendor =
+				AAAFindMatchingAVPList(group, group.head, AVP_Vendor_Id, 0, 0);
+		if(avp_vendor) {
+			vendor_id = get_4bytes(avp_vendor->data.s);
+		}
+
+		avp2 = AAAFindMatchingAVPList(
+				group, group.head, AVP_Auth_Application_Id, 0, 0);
+		if(avp2) {
+			app_id = get_4bytes(avp2->data.s);
+			p = get_routing_peer_by_app_id(
+					cdp_session, destination_realm, app_id, vendor_id);
+			if(p) {
+				AAAFreeAVPList(&group);
+				return p;
+			}
+		}
+		avp2 = AAAFindMatchingAVPList(
+				group, group.head, AVP_Acct_Application_Id, 0, 0);
+		if(avp2) {
+			app_id = get_4bytes(avp2->data.s);
+			p = get_routing_peer_by_app_id(
+					cdp_session, destination_realm, app_id, vendor_id);
+			if(p) {
+				AAAFreeAVPList(&group);
+				return p;
+			}
+		}
+		AAAFreeAVPList(&group);
+	}
+
+	avp_vendor = AAAFindMatchingAVP(m, 0, AVP_Vendor_Id, 0, AAA_FORWARD_SEARCH);
+	if(avp_vendor) {
+		vendor_id = get_4bytes(avp_vendor->data.s);
+	}
+
+	avp = AAAFindMatchingAVP(
+			m, 0, AVP_Auth_Application_Id, 0, AAA_FORWARD_SEARCH);
+	if(avp) {
+		app_id = get_4bytes(avp->data.s);
+		p = get_routing_peer_by_app_id(
+				cdp_session, destination_realm, app_id, vendor_id);
+		if(p)
+			return p;
+	}
+
+	avp = AAAFindMatchingAVP(
+			m, 0, AVP_Acct_Application_Id, 0, AAA_FORWARD_SEARCH);
+	if(avp) {
+		app_id = get_4bytes(avp->data.s);
+		p = get_routing_peer_by_app_id(
+				cdp_session, destination_realm, app_id, vendor_id);
+		if(p)
+			return p;
+	}
+
+	return 0;
 }
