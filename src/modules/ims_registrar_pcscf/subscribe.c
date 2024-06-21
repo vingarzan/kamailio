@@ -42,6 +42,7 @@ extern str force_icscf_uri;
 #define P_ASSERTED_IDENTITY_HDR_PREFIX "P-Asserted-Identity: <"
 #define ROUTE_HDR_PREFIX "Route: <"
 #define ROUTE_HDR_SEPARATOR ">, <"
+#define ROUTE_HDR_END ">" CRLF
 
 int reginfo_subscribe_real(struct sip_msg *msg, pv_elem_t *uri,
 		str *service_routes, int num_service_routes, int expires)
@@ -94,8 +95,9 @@ int reginfo_subscribe_real(struct sip_msg *msg, pv_elem_t *uri,
 				extra_headers.len += strlen(ROUTE_HDR_SEPARATOR);
 			}
 		}
-		memcpy(extra_headers.s + extra_headers.len, CRLF, CRLF_LEN);
-		extra_headers.len += CRLF_LEN;
+		memcpy(extra_headers.s + extra_headers.len, ROUTE_HDR_END,
+				strlen(ROUTE_HDR_END));
+		extra_headers.len += strlen(ROUTE_HDR_END);
 	}
 
 	if(pv_printf(msg, uri, uri_buf, &uri_buf_len) < 0) {
