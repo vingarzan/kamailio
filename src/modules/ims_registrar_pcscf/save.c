@@ -658,8 +658,8 @@ int save(struct sip_msg *_m, udomain_t *_d, int _cflags)
 				   "received");
 			goto done;
 		}
-		reginfo_subscribe_real(
-				_m, presentity_uri_pv, service_routes, subscription_expires);
+		reginfo_subscribe_real(_m, presentity_uri_pv, service_routes,
+				num_service_routes, subscription_expires);
 		pv_elem_free_all(presentity_uri_pv);
 	}
 
