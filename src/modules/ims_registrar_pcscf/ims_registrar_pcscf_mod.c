@@ -107,9 +107,7 @@ char *rcv_avp_param = 0;
 unsigned short rcv_avp_type = 0;
 int_str rcv_avp_name;
 
-ims_registrar_pcscf_params_t _imsregp_params = {
-	.delete_delay = 0
-};
+ims_registrar_pcscf_params_t _imsregp_params = {.delete_delay = 0};
 
 // static str orig_prefix = {"sip:orig@",9};
 

@@ -352,7 +352,8 @@ tryagain:
 	if(!c && mustRetryViaSearch) {
 		LM_DBG("This is a reply so we will search using the last via once "
 			   "more...\n");
-		vb = cscf_get_ue_via(_m); // if trust_bottom_via was set, we wouldn't get here, hence this remains as is.
+		// if trust_bottom_via was set, we wouldn't get here, hence this remains as is.
+		vb = cscf_get_ue_via(_m);
 		search_ci.via_host = vb->host;
 		search_ci.via_port = vb->port ? vb->port : 5060;
 		search_ci.via_prot = vb->proto;
