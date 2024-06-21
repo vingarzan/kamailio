@@ -183,9 +183,17 @@ static inline int update_contacts(struct sip_msg *req, struct sip_msg *rpl,
 						LM_ERR("No via header in request\n");
 						return -1;
 					}
-					ci.received_host = vb->host;
-					ci.received_port = vb->port;
-					// this actually doesn't matter, since IMS UEs register IPs for both
+					if(vb->received != NULL && vb->received->value.len > 0) {
+						ci.received_host = vb->received->value;
+					} else {
+						ci.received_host = vb->host;
+					}
+					if(vb->rport != NULL && vb->rport->value.len > 0) {
+						str2ushort(&vb->rport->value, &ci.received_port);
+					} else {
+						ci.received_port = vb->port;
+					}
+					// this probably doesn't matter, since IMS UEs register IPs for both
 					ci.received_proto = vb->proto;
 					ci.searchflag = SEARCH_RECEIVED;
 					LM_DBG("bottom Via from request: Via sent-by host [%.*s], "
@@ -397,8 +405,7 @@ int save_pending(struct sip_msg *_m, udomain_t *_d)
 	if(trust_bottom_via && vb->received && vb->received->value.len > 0) {
 		ci.received_host = vb->received->value;
 		if(vb->rport && vb->rport->value.len > 0) {
-			str2int(&vb->rport->value, (unsigned int *)&ci.received_port);
-		} else {
+			str2ushort(&vb->rport->value, &ci.received_port);
 		}
 		if(ci.received_port == 0) {
 			ci.received_port = 5060;
