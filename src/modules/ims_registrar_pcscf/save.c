@@ -387,14 +387,26 @@ int save_pending(struct sip_msg *_m, udomain_t *_d)
 	ci.num_service_routes = 0;
 	ci.expires = local_time_now + pending_reg_expires;
 	ci.reg_state = PCONTACT_ANY;
-	ci.searchflag =
-			SEARCH_RECEIVED; //we want to make sure we are very specific with this search to make sure we get the correct contact to put into reg_pending.
+	// we want to make sure we are very specific with this search to make
+	// sure we get the correct contact to put into reg_pending.
+	ci.searchflag = SEARCH_RECEIVED;
 
-	// Received Info: First try AVP, otherwise simply take the source of the request:
+	// Received Info: First see trust_bottom_via exception, then try AVP,
+	// otherwise simply take the source of the request:
 	memset(&val, 0, sizeof(int_str));
-	if(rcv_avp_name.n != 0
-			&& search_first_avp(rcv_avp_type, rcv_avp_name, &val, 0)
-			&& val.s.len > 0) {
+	if(trust_bottom_via && vb->received && vb->received->value.len > 0) {
+		ci.received_host = vb->received->value;
+		if(vb->rport && vb->rport->value.len > 0) {
+			str2int(&vb->rport->value, (unsigned int *)&ci.received_port);
+		} else {
+		}
+		if(ci.received_port == 0) {
+			ci.received_port = 5060;
+		}
+		ci.received_proto = vb->proto;
+	} else if(rcv_avp_name.n != 0
+			  && search_first_avp(rcv_avp_type, rcv_avp_name, &val, 0)
+			  && val.s.len > 0) {
 		if(val.s.len > RECEIVED_MAX_SIZE) {
 			LM_ERR("received too long\n");
 			goto error;
