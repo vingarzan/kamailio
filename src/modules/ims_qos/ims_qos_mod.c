@@ -224,7 +224,8 @@ static cmd_export_t cmds[] = {
 				fixup_aar_register, 0, REQUEST_ROUTE},
 		{0, 0, 0, 0, 0, 0}};
 
-static param_export_t params[] = {{"rx_dest_realm", PARAM_STR, &rx_dest_realm},
+static param_export_t params[] = {
+		{"rx_dest_realm", PARAM_STR, &rx_dest_realm},
 		{"rx_forced_peer", PARAM_STR, &rx_forced_peer},
 		{"rx_auth_expiry", INT_PARAM, &rx_auth_expiry},
 		{"af_signaling_ip", PARAM_STR,
@@ -261,7 +262,9 @@ static param_export_t params[] = {{"rx_dest_realm", PARAM_STR, &rx_dest_realm},
 		{"suspend_transaction", INT_PARAM, &_ims_qos_suspend_transaction},
 		{"recv_mode", PARAM_INT, &_imsqos_params.recv_mode},
 		{"dialog_direction", PARAM_INT, &_imsqos_params.dlg_direction},
-		{"trust_bottom_via", PARAM_INT, &trust_bottom_via}, {0, 0, 0}};
+		{"trust_bottom_via", PARAM_INT, &trust_bottom_via},
+		{0, 0, 0},
+};
 
 
 /** module exports */
