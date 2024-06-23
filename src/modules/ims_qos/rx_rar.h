@@ -30,6 +30,6 @@
 #ifndef RX_RAR_H
 #define RX_RAR_H
 
-AAAMessage* rx_process_rar(AAAMessage *request);
+AAAMessage *rx_process_rar(AAAMessage *request);
 
 #endif

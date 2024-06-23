@@ -48,9 +48,9 @@ extern cdp_avp_bind_t *cdp_avp;
 static void qos_run_route(sip_msg_t *msg, str *uri, char *route)
 {
 	int rt, backup_rt;
-    //this is declared in kamailio main files
+	//this is declared in kamailio main files
 	struct run_act_ctx ctx;
-	sip_msg_t *fmsg;	
+	sip_msg_t *fmsg;
 	str evname;
 
 	if(route == NULL) {
@@ -62,13 +62,13 @@ static void qos_run_route(sip_msg_t *msg, str *uri, char *route)
 
 	rt = -1;
 	//event_rt is declared in one of the main kamailio files
-    rt = route_lookup(&event_rt, route);
-    if(rt < 0 || event_rt.rlist[rt] == NULL) {
-        LM_DBG("route does not exist");
-        return;
-    }
-	
-    //this are also in the main kamailio file
+	rt = route_lookup(&event_rt, route);
+	if(rt < 0 || event_rt.rlist[rt] == NULL) {
+		LM_DBG("route does not exist");
+		return;
+	}
+
+	//this are also in the main kamailio file
 	if(msg == NULL) {
 		if(faked_msg_init() < 0) {
 			LM_ERR("faked_msg_init() failed\n");
@@ -81,10 +81,10 @@ static void qos_run_route(sip_msg_t *msg, str *uri, char *route)
 		fmsg = msg;
 	}
 
-	if(rt>=0) {		
+	if(rt >= 0) {
 		set_route_type(EVENT_ROUTE);
-		init_run_actions_ctx(&ctx);		
-		run_top_route(event_rt.rlist[rt], fmsg, 0);		
+		init_run_actions_ctx(&ctx);
+		run_top_route(event_rt.rlist[rt], fmsg, 0);
 	}
 }
 
@@ -98,78 +98,89 @@ static void qos_run_route(sip_msg_t *msg, str *uri, char *route)
  * @param request - the AAAMessage with the RAR
  * @returns an RAA to be sent to the PCRF by the cdp stack 
 */
-AAAMessage* rx_process_rar(AAAMessage *request) {
-    AAAMessage *raa = 0;
-    AAASession* session = 0;
-    AAA_AVP * avp = NULL;
-    int32_t action =0;    
-    rx_authsessiondata_t* p_session_data = 0;
-    str pani_content = {0};
-    str visited_net ={0};
-    char x[4];
-    str identifier = {0};
+AAAMessage *rx_process_rar(AAAMessage *request)
+{
+	AAAMessage *raa = 0;
+	AAASession *session = 0;
+	AAA_AVP *avp = NULL;
+	int32_t action = 0;
+	rx_authsessiondata_t *p_session_data = 0;
+	str pani_content = {0};
+	str visited_net = {0};
+	char x[4];
+	str identifier = {0};
 
-    if (!request) return 0;
-    raa = cdpb.AAACreateResponse(request);
-    if (!raa) return 0;
-    if (request->sessionId) {
-        //This one locks the session
-        session = cdpb.AAAGetAuthSession(request->sessionId->data);
-        if (!session) goto unknown_session;
-    } else {
-        goto unknown_session;
-    }
-    //Here the session is locked
-    p_session_data = (rx_authsessiondata_t*) session->u.auth.generic_data;
-    if (!p_session_data) goto unknown_session;
-    for (avp= request->avpList.head;avp;avp=avp->next) {
-        switch (avp->code) {
-            case AVP_IMS_Specific_Action:
-                // check the type of specific Action is an enum (Integer32)
-                cdp_avp.get_Integer32(avp,&action);
-                if (action == ACCESS_NETWORK_INFO_REPORT ) {                    
-                    //And then process them differently if its a signaling path status or a call
-                    rx_avp_process_3gpp_user_location_information(request, &pani_content);
-                    rx_avp_process_3gpp_sgsn_mcc_mnc(request, &visited_net);
-                    //these two functions have reserved memory
-                } 
-                               
-                if (p_session_data->subscribed_to_signaling_path_status) {                    
-                    identifier = p_session_data.registration_aor;
-                } else {
-                    identifier = p_session_data->identifier;
-                    
-                }
-                */
-               create_complex_return_code(2001, visited_net, pani_content);
-               qos_run_route(NULL,&identifier,"event:qos_rar_access_network");
-                break;
-            default:
-            break;
-        }
-    }
-    //TODO check if there is a transaction stopped, and in that case then continue it  
-    //if (p_session_data->)   
-    goto success;
-error:        
-    if (session) cdpb.AAASessionsUnlock(session->hash);
-    set_4bytes(x,5012); // UNABLE_TO_COMPLY
-    if (pani_content.s) pkg_free(pani_content.s);
-    if (visited_net.s) pkg_free(visited_net.s);
-    goto send;
-unknown_session:    
-    if (pani_content.s) pkg_free(pani_content.s);
-    if (visited_net.s) pkg_free(visited_net.s);
-    set_4bytes(x, 5002); // UNKNOWN_SESSION_ID
-    goto send;    
+	if(!request)
+		return 0;
+	raa = cdpb.AAACreateResponse(request);
+	if(!raa)
+		return 0;
+	if(request->sessionId) {
+		//This one locks the session
+		session = cdpb.AAAGetAuthSession(request->sessionId->data);
+		if(!session)
+			goto unknown_session;
+	} else {
+		goto unknown_session;
+	}
+	//Here the session is locked
+	p_session_data = (rx_authsessiondata_t *)session->u.auth.generic_data;
+	if(!p_session_data)
+		goto unknown_session;
+	for(avp = request->avpList.head; avp; avp = avp->next) {
+		switch(avp->code) {
+			case AVP_IMS_Specific_Action:
+				// check the type of specific Action is an enum (Integer32)
+				cdp_avp.get_Integer32(avp, &action);
+				if(action == ACCESS_NETWORK_INFO_REPORT) {
+					//And then process them differently if its a signaling path status or a call
+					rx_avp_process_3gpp_user_location_information(
+							request, &pani_content);
+					rx_avp_process_3gpp_sgsn_mcc_mnc(request, &visited_net);
+					//these two functions have reserved memory
+				}
+
+				if(p_session_data->subscribed_to_signaling_path_status) {
+					identifier = p_session_data.registration_aor;
+				} else {
+					identifier = p_session_data->identifier;
+				}
+				* / create_complex_return_code(2001, visited_net, pani_content);
+				qos_run_route(
+						NULL, &identifier, "event:qos_rar_access_network");
+				break;
+			default:
+				break;
+		}
+	}
+	//TODO check if there is a transaction stopped, and in that case then continue it
+	//if (p_session_data->)
+	goto success;
+error:
+	if(session)
+		cdpb.AAASessionsUnlock(session->hash);
+	set_4bytes(x, 5012); // UNABLE_TO_COMPLY
+	if(pani_content.s)
+		pkg_free(pani_content.s);
+	if(visited_net.s)
+		pkg_free(visited_net.s);
+	goto send;
+unknown_session:
+	if(pani_content.s)
+		pkg_free(pani_content.s);
+	if(visited_net.s)
+		pkg_free(visited_net.s);
+	set_4bytes(x, 5002); // UNKNOWN_SESSION_ID
+	goto send;
 success:
-    set_4bytes(x, 2001); // SUCCESS    
-    cdpb.AAASessionsUnlock(session->hash);
-    if (pani_content.s) pkg_free(pani_content.s);
-    if (visited_net.s) pkdg_free(visited_net.s);
- send:
-    rx_add_avp(raa, x, 4, AVP_Result_Code,
-            AAA_AVP_FLAG_MANDATORY, 0,
-            AVP_DUPLICATE_DATA, __FUNCTION__);
-    return raa;
+	set_4bytes(x, 2001); // SUCCESS
+	cdpb.AAASessionsUnlock(session->hash);
+	if(pani_content.s)
+		pkg_free(pani_content.s);
+	if(visited_net.s)
+		pkdg_free(visited_net.s);
+send:
+	rx_add_avp(raa, x, 4, AVP_Result_Code, AAA_AVP_FLAG_MANDATORY, 0,
+			AVP_DUPLICATE_DATA, __FUNCTION__);
+	return raa;
 }
