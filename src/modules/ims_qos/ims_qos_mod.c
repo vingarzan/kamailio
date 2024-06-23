@@ -831,92 +831,92 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 
 	//We don't ever do AAR on request for calling scenario...
 	if(msg->first_line.type != SIP_REPLY) {
-		LM_DBG("Can't do AAR for call session in request\n");
-		return result;
-	}
+		//LM_DBG("Can't do AAR for call session in request\n");
+		orig_sip_request_msg = msg;
+	} else {
 
-	//is it appropriate to send AAR at this stage?
-	t = tmb.t_gett();
-	if(t == NULL || t == T_UNDEFINED) {
-		LM_WARN("Cannot get transaction for AAR based on SIP Request\n");
-		//goto aarna;
-		return result;
-	}
+		//is it appropriate to send AAR at this stage?
+		t = tmb.t_gett();
+		if(t == NULL || t == T_UNDEFINED) {
+			LM_WARN("Cannot get transaction for AAR based on SIP Request\n");
+			//goto aarna;
+			return result;
+		}
 
-	if(t->uas.status >= 200) {
-		LM_WARN("transaction sent out a final response already - %d\n",
-				t->uas.status);
-		return result;
-	}
+		if(t->uas.status >= 200) {
+			LM_WARN("transaction sent out a final response already - %d\n",
+					t->uas.status);
+			return result;
+		}
 
 
-	/*  we may need the request message from here on.. if there are headers we need that were not parsed in the original request
-			(which we cannot assume) then we would pollute the shm_msg t->uas.request if we did any parsing on it. Instead, we need to
-			make a private copy of the message and free it when we are done
-		 */
-	if(msg_ctx_id_match(t->uas.request, &_pv_treq.msg_ctx) != 1) {
+		/*  we may need the request message from here on.. if there are headers we need that were not parsed in the original request
+				(which we cannot assume) then we would pollute the shm_msg t->uas.request if we did any parsing on it. Instead, we need to
+				make a private copy of the message and free it when we are done
+			*/
+		if(msg_ctx_id_match(t->uas.request, &_pv_treq.msg_ctx) != 1) {
 
-		/* make a copy */
-		if(_pv_treq.buf == NULL
-				|| _pv_treq.buf_size < t->uas.request->len + 1) {
-			if(_pv_treq.buf != NULL)
-				pkg_free(_pv_treq.buf);
+			/* make a copy */
+			if(_pv_treq.buf == NULL
+					|| _pv_treq.buf_size < t->uas.request->len + 1) {
+				if(_pv_treq.buf != NULL)
+					pkg_free(_pv_treq.buf);
+				if(_pv_treq.tmsgp)
+					free_sip_msg(&_pv_treq.msg);
+				_pv_treq.tmsgp = NULL;
+				_pv_treq.msg_ctx.msgid = 0;
+				_pv_treq.msg_ctx.pid = 0;
+				_pv_treq.T = NULL;
+				_pv_treq.buf_size = t->uas.request->len + 1;
+				_pv_treq.buf = (char *)pkg_malloc(_pv_treq.buf_size * sizeof(char));
+				if(_pv_treq.buf == NULL) {
+					LM_ERR("no more pkg\n");
+					_pv_treq.buf_size = 0;
+					return -1;
+				}
+			}
 			if(_pv_treq.tmsgp)
 				free_sip_msg(&_pv_treq.msg);
-			_pv_treq.tmsgp = NULL;
-			_pv_treq.msg_ctx.msgid = 0;
-			_pv_treq.msg_ctx.pid = 0;
-			_pv_treq.T = NULL;
-			_pv_treq.buf_size = t->uas.request->len + 1;
-			_pv_treq.buf = (char *)pkg_malloc(_pv_treq.buf_size * sizeof(char));
-			if(_pv_treq.buf == NULL) {
-				LM_ERR("no more pkg\n");
+			memset(&_pv_treq.msg, 0, sizeof(struct sip_msg));
+			memcpy(_pv_treq.buf, t->uas.request->buf, t->uas.request->len);
+			_pv_treq.buf[t->uas.request->len] = '\0';
+			_pv_treq.msg.len = t->uas.request->len;
+			_pv_treq.msg.buf = _pv_treq.buf;
+			_pv_treq.tmsgp = t->uas.request;
+			msg_ctx_id_set(t->uas.request, &_pv_treq.msg_ctx);
+			_pv_treq.T = t;
+
+
+			if(pv_t_copy_msg(t->uas.request, &_pv_treq.msg) != 0) {
+				pkg_free(_pv_treq.buf);
 				_pv_treq.buf_size = 0;
+				_pv_treq.buf = NULL;
+				_pv_treq.tmsgp = NULL;
+				_pv_treq.T = NULL;
 				return -1;
 			}
 		}
-		if(_pv_treq.tmsgp)
-			free_sip_msg(&_pv_treq.msg);
-		memset(&_pv_treq.msg, 0, sizeof(struct sip_msg));
-		memcpy(_pv_treq.buf, t->uas.request->buf, t->uas.request->len);
-		_pv_treq.buf[t->uas.request->len] = '\0';
-		_pv_treq.msg.len = t->uas.request->len;
-		_pv_treq.msg.buf = _pv_treq.buf;
-		_pv_treq.tmsgp = t->uas.request;
-		msg_ctx_id_set(t->uas.request, &_pv_treq.msg_ctx);
-		_pv_treq.T = t;
+
+		orig_sip_request_msg = &_pv_treq.msg;
 
 
-		if(pv_t_copy_msg(t->uas.request, &_pv_treq.msg) != 0) {
-			pkg_free(_pv_treq.buf);
-			_pv_treq.buf_size = 0;
-			_pv_treq.buf = NULL;
-			_pv_treq.tmsgp = NULL;
-			_pv_treq.T = NULL;
-			return -1;
-		}
-	}
-
-	orig_sip_request_msg = &_pv_treq.msg;
-
-
-	//we do not apply QoS if it is not a reply to an INVITE! or UPDATE or PRACK!
-	if((t->method.len == 5 && memcmp(t->method.s, "PRACK", 5) == 0)
-			|| (t->method.len == 6
-					&& (memcmp(t->method.s, "INVITE", 6) == 0
-							|| memcmp(t->method.s, "UPDATE", 6) == 0))) {
-		if(cscf_get_content_length(msg) == 0
-				|| cscf_get_content_length(orig_sip_request_msg) == 0) {
-			LM_WARN("No SDP offer answer -> therefore we can not do Rx AAR");
-			//goto aarna; //AAR na if we don't have offer/answer pair
+		//we do not apply QoS if it is not a reply to an INVITE! or UPDATE or PRACK!
+		if((t->method.len == 5 && memcmp(t->method.s, "PRACK", 5) == 0)
+				|| (t->method.len == 6
+						&& (memcmp(t->method.s, "INVITE", 6) == 0
+								|| memcmp(t->method.s, "UPDATE", 6) == 0))) {
+			if(cscf_get_content_length(msg) == 0
+					|| cscf_get_content_length(orig_sip_request_msg) == 0) {
+				LM_WARN("No SDP offer answer -> therefore we can not do Rx AAR");
+				//goto aarna; //AAR na if we don't have offer/answer pair
+				return result;
+			}
+		} else {
+			LM_WARN("Message is not response to INVITE, PRACK or UPDATE -> "
+					"therefore we do not Rx AAR");
 			return result;
 		}
-	} else {
-		LM_WARN("Message is not response to INVITE, PRACK or UPDATE -> "
-				"therefore we do not Rx AAR");
-		return result;
-	}
-
+	} // this finishes the else of a check of sip request or reply
 	/* get callid, from and to tags to be able to identify dialog */
 	callid = cscf_get_call_id(msg, 0);
 	if(callid.len <= 0 || !callid.s) {
@@ -1246,7 +1246,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		saved_t_data->aar_update =
 				1; //this is an update aar - we set this so on async_aar we know this is an update and act accordingly
 	}
-
+	//TODO solve the issue with Dialog
 	dlg = dlgb.get_dlg(msg);
 	if(!dlg) {
 		LM_ERR("Unable to find dialog and cannot do Rx without it\n");
