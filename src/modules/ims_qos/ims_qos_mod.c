@@ -1238,7 +1238,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 	} else {
 		LM_DBG("Update AAR session for this dialog in mode %s\n", direction);
 		//check if this is triggered by a 183 - if so break here as it is probably a re-transmit
-		if(!is_request && (msg->first_line).u.reply.statuscode == 183) {
+		if(!is_request && msg->first_line.u.reply.statuscode == 183) {
 			LM_DBG("Received a 183 for a diameter session that already exists "
 				   "- just going to ignore this\n");
 			cdpb.AAASessionsUnlock(auth_session->hash);
