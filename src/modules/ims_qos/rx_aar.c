@@ -1183,7 +1183,7 @@ int rx_send_aar_register(struct sip_msg *msg, AAASession *auth,
 	//Alberto Diez 23.06.2024
 	//TODO substitute this with their corresponding constants
 	rx_add_supported_features(&aar->avpList, 10415, 1, 0x10);
-	rx_add_required_access_info(aar);
+	rx_add_required_access_info(aar, 0);
 
 	if(auth)
 		cdpb.AAASessionsUnlock(auth->hash);

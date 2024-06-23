@@ -107,6 +107,8 @@ int rx_avp_process_3gpp_sgsn_mcc_mnc(AAAMessage *aaa, str *dst);
 int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst);
 int rx_add_supported_features(AAA_AVP_LIST *msglist, uint32_t vendorid,
 		uint32_t feature_list_id, uint32_t feature_list);
+int rx_add_required_access_info(AAAMessage *req, uint32_t data);
+
 int rx_avp_process_3gpp_access_network_charging_identifier(
 		AAAMessage *msg, str *dst);
 

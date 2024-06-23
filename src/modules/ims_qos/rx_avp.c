@@ -1653,17 +1653,16 @@ int rx_add_supported_features(AAA_AVP_LIST *list, uint32_t vendorid,
 			list, vendorid, feature_list_id, feature_list);
 }
 
-// Is this actually used? If so, we can fix it, but it's probably missing a parameter in the function def
-// int rx_add_required_access_info(AAAMessage *req)
-// {
-// 	if(!req)
-// 		return 0;
-// 	char x[4] = 0; // User-Location and not TimeZone
-// 	set_4bytes(x, data);
+int rx_add_required_access_info(AAAMessage *req, uint32_t data)
+{
+	if(!req)
+		return 0;
+	char x[4] = {0}; // User-Location and not TimeZone
+	set_4bytes(x, data);
 
-// 	return rx_add_avp(req, x, 4, 536, AAA_AVP_FLAG_VENDOR_SPECIFIC,
-// 			IMS_vendor_id_3GPP, AVP_DUPLICATE_DATA, __FUNCTION__);
-// }
+	return rx_add_avp(req, x, 4, 536, AAA_AVP_FLAG_VENDOR_SPECIFIC,
+			IMS_vendor_id_3GPP, AVP_DUPLICATE_DATA, __FUNCTION__);
+}
 
 
 /**
