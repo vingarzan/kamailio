@@ -1270,9 +1270,13 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 	}
 
 	LM_DBG("Sending Rx AAR");
-	ret = rx_send_aar(
+	if (!is_request) {
+		ret = rx_send_aar(
 			orig_sip_request_msg, msg, auth_session, direction, saved_t_data);
-
+	} else {
+		ret = rx_send_aar(
+			msg, 0, auth_session, direction, saved_t_data);
+	}
 	if(!ret) {
 		LM_ERR("Failed to send AAR\n");
 		if(_ims_qos_suspend_transaction) {

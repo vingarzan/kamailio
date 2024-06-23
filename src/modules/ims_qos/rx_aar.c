@@ -540,7 +540,7 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 	rx_authsessiondata_t *p_session_data = 0;
 	p_session_data = (rx_authsessiondata_t *)auth->u.auth.generic_data;
 
-	if(!req || !rpl) {
+	if(!req) {
 		goto error;
 	}
 
@@ -549,7 +549,7 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 		goto error;
 	}
 
-	if(parse_sdp(rpl) < 0) {
+	if(rpl && parse_sdp(rpl) < 0) {
 		LM_ERR("Unable to parse res SDP\n");
 		goto error;
 	}
@@ -564,14 +564,10 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 		}
 
 		req_sdp_session = get_sdp_session(req, sdp_session_num);
-		rpl_sdp_session = get_sdp_session(rpl, sdp_session_num);
-		if(!req_sdp_session || !rpl_sdp_session) {
+		if (rpl) rpl_sdp_session = get_sdp_session(rpl, sdp_session_num);
+		if(!req_sdp_session) {
 			if(!req_sdp_session)
 				LM_ERR("Missing SDP session information from req\n");
-
-			if(!rpl_sdp_session)
-				LM_ERR("Missing SDP session information from rpl\n");
-
 			goto error;
 		}
 
@@ -579,9 +575,9 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 		for(;;) {
 			req_sdp_stream =
 					get_sdp_stream(req, sdp_session_num, sdp_stream_num);
-			rpl_sdp_stream =
+			if (rpl) rpl_sdp_stream =
 					get_sdp_stream(rpl, sdp_session_num, sdp_stream_num);
-			if(!req_sdp_stream || !rpl_sdp_stream) {
+			if(!req_sdp_stream) {
 				//LM_ERR("Missing SDP stream information\n");
 				break;
 			}
@@ -590,8 +586,10 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 
 				//check if the src or dst port is 0 and if so then don't add to rx
 				int intportA = atoi(req_sdp_stream->port.s);
-				int intportB = atoi(rpl_sdp_stream->port.s);
-				if(intportA != 0 && intportB != 0) {
+				if (rpl) {
+					int intportB = atoi(rpl_sdp_stream->port.s);
+				}
+				if(intportA != 0 && (rpl && intportB != 0)) {
 					if(!authorize_video_flow) {
 						if(strncmp(req_sdp_stream->media.s, "video", 5) == 0) {
 							add_flow = 0;
@@ -601,7 +599,7 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 					if(add_flow) {
 
 
-						if(cscf_get_to_tag(rpl, &ttag)
+						if(rpl && cscf_get_to_tag(rpl, &ttag)
 								&& cscf_get_from_tag(rpl, &ftag)) {
 							LM_DBG("Original ftag [%.*s] ttag [%.*s].  Current "
 								   "ftag [%.*s] ttag [%.*s]\n",
@@ -627,7 +625,7 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 								   "request originated from caller\n");
 						}
 
-						if(request_originated_from_callee) {
+						if(rpl && request_originated_from_callee) {
 							LM_DBG("Request originated from callee so IPs are "
 								   "reversed\n");
 							ipA = rpl_sdp_session->ip_addr;
@@ -647,7 +645,7 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 						if(ipA.len <= 0) {
 							LM_DBG("Request SDP connection IP could not be "
 								   "retrieved, so we use SDP 1st stream IP\n");
-							if(request_originated_from_callee) {
+							if(rpl && request_originated_from_callee) {
 								LM_DBG("Request originated from callee so IPs "
 									   "are reversed\n");
 								ipA = rpl_sdp_stream->ip_addr;
@@ -665,7 +663,7 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 							}
 						}
 
-						if(ipB.len <= 0) {
+						if(rpl && ipB.len <= 0) {
 							LM_DBG("Reply SDP connection IP could not be "
 								   "retrieved, so we use SDP 1st stream IP\n");
 							if(request_originated_from_callee) {
@@ -691,17 +689,17 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 													 auth->u.auth.generic_data,
 								sdp_stream_num + 1, &req_sdp_stream->media,
 								&ipA, &portA, &ipB, &portB,
-								&rpl_sdp_stream->transport,
+								rpl?&rpl_sdp_stream->transport:0,
 								&req_sdp_stream->raw_stream,
-								&rpl_sdp_stream->raw_stream, direction,
+								rpl?&rpl_sdp_stream->raw_stream:0, direction,
 								0 /*This is a new mcd, we are not setting it as active*/);
 
 						rx_add_media_component_description_avp(aar,
 								sdp_stream_num + 1, &req_sdp_stream->media,
 								&ipA, &portA, &ipB, &portB,
-								&rpl_sdp_stream->transport,
+								rpl?&rpl_sdp_stream->transport:0,
 								&req_sdp_stream->raw_stream,
-								&rpl_sdp_stream->raw_stream, direction,
+								rpl?&rpl_sdp_stream->raw_stream:0, direction,
 								AVP_EPC_Flow_Usage_No_Information);
 					}
 					add_flow = 1;
@@ -713,7 +711,7 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 	}
 
 	free_sdp((sdp_info_t **)(void *)&req->body);
-	free_sdp((sdp_info_t **)(void *)&rpl->body);
+	if (rpl) free_sdp((sdp_info_t **)(void *)&rpl->body);
 
 	return 1;
 
