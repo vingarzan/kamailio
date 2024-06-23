@@ -789,6 +789,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 	saved_transaction_t *saved_t_data =
 			0; //data specific to each contact's AAR async call
 	char *direction = dir;
+	int is_request = 0;
 
 	// standard config
 	if(cfg_type == 0) {
@@ -832,6 +833,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 	//We don't ever do AAR on request for calling scenario...
 	if(msg->first_line.type != SIP_REPLY) {
 		//LM_DBG("Can't do AAR for call session in request\n");
+		is_request = 1;
 		orig_sip_request_msg = msg;
 	} else {
 
@@ -1236,7 +1238,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 	} else {
 		LM_DBG("Update AAR session for this dialog in mode %s\n", direction);
 		//check if this is triggered by a 183 - if so break here as it is probably a re-transmit
-		if((msg->first_line).u.reply.statuscode == 183) {
+		if(!is_request && (msg->first_line).u.reply.statuscode == 183) {
 			LM_DBG("Received a 183 for a diameter session that already exists "
 				   "- just going to ignore this\n");
 			cdpb.AAASessionsUnlock(auth_session->hash);
