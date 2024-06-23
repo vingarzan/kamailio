@@ -29,9 +29,12 @@
 
 #include "../cdp_avp/cdp_avp_mod.h"
 
-#include "../../modules/dialog/dlg_load.h"
-#include "../ims_usrloc_pcscf/usrloc.h"
+#include "../../core/fmsg.h"
+
+#include "../../modules/ims_usrloc_pcscf/usrloc.h"
+
 #include "rx_authdata.h"
+#include "ims_qos_mod.h"
 
 #include "rx_rar.h"
 #include "rx_avp.h"
@@ -47,11 +50,11 @@ extern cdp_avp_bind_t *cdp_avp;
  */
 static void qos_run_route(sip_msg_t *msg, str *uri, char *route)
 {
-	int rt, backup_rt;
+	int rt;
 	//this is declared in kamailio main files
-	struct run_act_ctx ctx;
-	sip_msg_t *fmsg;
-	str evname;
+	struct run_act_ctx ctx = {0};
+	sip_msg_t *fmsg = 0;
+	// str evname = {0};
 
 	if(route == NULL) {
 		LM_ERR("bad route\n");
@@ -105,8 +108,9 @@ AAAMessage *rx_process_rar(AAAMessage *request)
 	AAA_AVP *avp = NULL;
 	int32_t action = 0;
 	rx_authsessiondata_t *p_session_data = 0;
-	str pani_content = {0};
 	str visited_net = {0};
+	str pani_content = {0};
+	str access_network_charging_info = {0};
 	char x[4];
 	str identifier = {0};
 
@@ -123,6 +127,14 @@ AAAMessage *rx_process_rar(AAAMessage *request)
 	} else {
 		goto unknown_session;
 	}
+
+	if(!rx_avp_process_3gpp_access_network_charging_identifier(
+			   request, &access_network_charging_info)) {
+		LM_ERR("Error processing Access Network Charging Identifier\n");
+		goto error;
+	}
+
+
 	//Here the session is locked
 	p_session_data = (rx_authsessiondata_t *)session->u.auth.generic_data;
 	if(!p_session_data)
@@ -131,7 +143,7 @@ AAAMessage *rx_process_rar(AAAMessage *request)
 		switch(avp->code) {
 			case AVP_IMS_Specific_Action:
 				// check the type of specific Action is an enum (Integer32)
-				cdp_avp.get_Integer32(avp, &action);
+				cdp_avp->data.get_Integer32(avp, &action);
 				if(action == ACCESS_NETWORK_INFO_REPORT) {
 					//And then process them differently if its a signaling path status or a call
 					rx_avp_process_3gpp_user_location_information(
@@ -141,11 +153,12 @@ AAAMessage *rx_process_rar(AAAMessage *request)
 				}
 
 				if(p_session_data->subscribed_to_signaling_path_status) {
-					identifier = p_session_data.registration_aor;
+					identifier = p_session_data->registration_aor;
 				} else {
 					identifier = p_session_data->identifier;
 				}
-				* / create_complex_return_code(2001, visited_net, pani_content);
+				create_complex_return_code(2001, visited_net, pani_content,
+						access_network_charging_info);
 				qos_run_route(
 						NULL, &identifier, "event:qos_rar_access_network");
 				break;
@@ -164,12 +177,16 @@ error:
 		pkg_free(pani_content.s);
 	if(visited_net.s)
 		pkg_free(visited_net.s);
+	if(access_network_charging_info.s)
+		pkg_free(access_network_charging_info.s);
 	goto send;
 unknown_session:
 	if(pani_content.s)
 		pkg_free(pani_content.s);
 	if(visited_net.s)
 		pkg_free(visited_net.s);
+	if(access_network_charging_info.s)
+		pkg_free(access_network_charging_info.s);
 	set_4bytes(x, 5002); // UNKNOWN_SESSION_ID
 	goto send;
 success:
@@ -178,7 +195,9 @@ success:
 	if(pani_content.s)
 		pkg_free(pani_content.s);
 	if(visited_net.s)
-		pkdg_free(visited_net.s);
+		pkg_free(visited_net.s);
+	if(access_network_charging_info.s)
+		pkg_free(access_network_charging_info.s);
 send:
 	rx_add_avp(raa, x, 4, AVP_Result_Code, AAA_AVP_FLAG_MANDATORY, 0,
 			AVP_DUPLICATE_DATA, __FUNCTION__);

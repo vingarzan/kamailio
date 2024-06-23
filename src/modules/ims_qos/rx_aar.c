@@ -319,7 +319,7 @@ void async_aar_reg_callback(
 	}
 	//Alberto Diez 08.06.2024 extracting P-Visited-Network-Id and Access-Network-Info
 
-	rx_avp_process_3gpp_sgsn_mcc_mnc(aaa, &visited_network_Id);
+	rx_avp_process_3gpp_sgsn_mcc_mnc(aaa, &visited_network_id);
 	rx_avp_process_3gpp_user_location_information(
 			aaa, &access_network_information);
 	rx_avp_process_3gpp_access_network_charging_identifier(
@@ -439,7 +439,7 @@ void async_aar_reg_callback(
 error:
 	//set failure response code
 	create_complex_return_code(result, visited_network_id,
-			access_network_informationm, access_network_charging_info);
+			access_network_information, access_network_charging_info);
 
 
 done:
@@ -1182,7 +1182,7 @@ int rx_send_aar_register(struct sip_msg *msg, AAASession *auth,
 	}
 	//Alberto Diez 23.06.2024
 	//TODO substitute this with their corresponding constants
-	rx_add_supported_features(aar->avpList, 10415, 1, 0x10);
+	rx_add_supported_features(&aar->avpList, 10415, 1, 0x10);
 	rx_add_required_access_info(aar);
 
 	if(auth)
