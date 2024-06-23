@@ -1396,7 +1396,6 @@ inline int rx_add_specific_action_avp(AAAMessage *msg, unsigned int data)
 int rx_mcc_mnc_to_sip_visited(str *dst, str src)
 {
 	uint16_t mnc, mcc = 0;
-	int i, c = 0;
 
 	if(!dst || src.len == 0) {
 		return 0;
@@ -1421,8 +1420,8 @@ int rx_mcc_mnc_to_sip_visited(str *dst, str src)
 	}
 //Now allocate memory in process to store it in the format of P-Visited-Network-Id
 #define VISITED_ID_MAX_LENGTH 64
-	dst.s = pkg_malloc(sizeof(char) * VISITED_ID_MAX_LENGTH);
-	dst.len = snprintf(dst.s, VISITED_ID_MAX_LENGTH,
+	dst->s = pkg_malloc(sizeof(char) * VISITED_ID_MAX_LENGTH);
+	dst->len = snprintf(dst->s, VISITED_ID_MAX_LENGTH,
 			"ims.mnc%03d.mcc%03d.3gppnetwork.org", mnc, mcc);
 	return 1;
 }
@@ -1445,8 +1444,8 @@ int rx_avp_process_3gpp_sgsn_mcc_mnc(AAAMessage *aaa, str *dst)
 	if (!cdp_avp_get_UTF8String(avp, data)) {
 		return 0;
 	} */
-	if(avp->data) {
-		return (rx_mcc_mnc_to_sip_visited(dst, avp->data))
+	if(avp->data.len) {
+		return rx_mcc_mnc_to_sip_visited(dst, avp->data);
 	}
 	return 0;
 }
@@ -1504,10 +1503,8 @@ BOTH are full hex
 
 int rx_avp_extract_mcc_mnc(str src, int *mcc, int *mnc)
 {
-	int c = 0;
 	if(src.len < 3 || !src.s || !mcc || !mnc)
 		return 0;
-	c = ;
 	*mcc = (src.s[0] & 0x0F) * 100 + ((src.s[0] & 0xF0) >> 4) * 10
 		   + (src.s[1] & 0x0F);
 	if(((src.s[1] & 0xF0) >> 4) == 0x0F) {
@@ -1515,7 +1512,7 @@ int rx_avp_extract_mcc_mnc(str src, int *mcc, int *mnc)
 		*mnc = (src.s[2] & 0x0F) * 10 + ((src.s[2] & 0xF0) >> 4);
 	} else {
 		*mnc = (src.s[2] & 0x0F) * 100 + ((src.s[2] & 0xF0) >> 4) * 10
-			   + ((src.s[1] & 0xF0) >> 4)
+			   + ((src.s[1] & 0xF0) >> 4);
 	}
 	return 1;
 }
@@ -1527,7 +1524,14 @@ int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst)
 {
 	str data = {0, 0};
 	char *p = 0;
-	str cgi, sai, rai, tai, ecgi, lai, enbId, eenbId = {0};
+	// str cgi = {0};
+	// str sai = {0};
+	// str rai = {0};
+	str tai = {0};
+	str ecgi = {0};
+	// str lai = {0};
+	// str enbId = {0};
+	// str eenbId = {0};
 	int mnc, mcc = 0;
 	uint16_t tac = 0;
 	uint16_t length = 0;
@@ -1535,7 +1539,7 @@ int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst)
 
 	if(!rar || !dst)
 		return 0;
-	if(!cdp_avp.epcapp.get_3GPP_User_Location_Info(rar->avpList, &data, 0)) {
+	if(!cdp_avp->epcapp.get_3GPP_User_Location_Info(rar->avpList, &data, 0)) {
 		return 0;
 	} else {
 		if(!data.len) {
@@ -1546,20 +1550,20 @@ int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst)
 				 - 1; // that's the payload length independent of what it says
 		p = data.s + 1;
 		if((data.s[0] & 0x01) && length >= 7) {
-			cgi.s = p;
-			cgi.len = 7;
+			// cgi.s = p;
+			// cgi.len = 7;
 			p += 7;
 			length -= 7;
 		}
 		if((data.s[0] & 0x02) && length >= 7) {
-			sai.s = p;
-			sai.len = 7;
+			// sai.s = p;
+			// sai.len = 7;
 			p += 7;
 			length -= 7;
 		}
 		if((data.s[0] & 0x04) && length >= 7) {
-			rai.s = p;
-			rai.len = 7;
+			// rai.s = p;
+			// rai.len = 7;
 			p += 7;
 			length -= 7;
 		}
@@ -1576,20 +1580,20 @@ int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst)
 			length -= 7;
 		}
 		if((data.s[0] & 0x20) && length >= 5) {
-			lai.s = p;
-			lai.len = 5;
+			// lai.s = p;
+			// lai.len = 5;
 			p += 5;
 			length -= 5;
 		}
 		if((data.s[0] & 0x40) && length >= 6) {
-			enbId.s = p;
-			enbId.len = 6;
+			// enbId.s = p;
+			// enbId.len = 6;
 			p += 6;
 			length -= 6;
 		}
 		if((data.s[0] & 0x80) && length >= 6) {
-			eenbId.s = p;
-			eenbId.len = 6;
+			// eenbId.s = p;
+			// eenbId.len = 6;
 			p += 6;
 			length -= 6;
 		}
@@ -1607,7 +1611,13 @@ int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst)
 			tac |= (tai.s[3] << 8);
 			eci = ((ecgi.s[0] & 0x0F) << 24) + (ecgi.s[1] << 16)
 				  + (ecgi.s[2] << 8) + ecgi.s[3];
-			dst->len = pkg_malloc(dst->s, 32 * (sizeof(char)));
+			dst->len = 32 * sizeof(char);
+			dst->s = pkg_malloc(dst->len);
+			if(!dst->s) {
+				LOG(L_ERR,
+						"Could not allocate memory for P-Visited-Network-Id\n");
+				return 0;
+			}
 			//we produce a 16-19 chars depending if MNC is 3 chars or only 2 and if TAC is 16 or 8 bits only
 			if(tac & 0xFF00) {
 				dst->len = snprintf(dst->s, dst->len,
@@ -1628,30 +1638,32 @@ int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst)
  * This adds a feature list with its vendor-id and its list id to the provided list
  * @msglist - pointer to the list of AVPs where to add the Supported Features AVP
  */
-int rx_add_supported_features(AAA_AVP_List *msglist, uint32_t vendorid,
+int rx_add_supported_features(AAA_AVP_LIST *list, uint32_t vendorid,
 		uint32_t feature_list_id, uint32_t feature_list)
 {
-	AAA_AVP_List list = {0};
-	if(!msglist)
-		return 0;
+	// AAA_AVP_LIST list = {0};
+	// if(!msglist)
+	// 	return 0;
 
-	cdp_avp->base.add_Vendor_Id(&list, vendorid);
-	cdp_avp->imsapp.add_Feature_List_ID(&list, feature_list_id);
-	cdp_avp->imsapp.add_Feature_List(&list, feature_list);
+	// cdp_avp->base.add_Vendor_Id(&list, vendorid);
+	// cdp_avp->imsapp.add_Feature_List_ID(&list, feature_list_id);
+	// cdp_avp->imsapp.add_Feature_List(&list, feature_list);
 
-	return (cdp_avp->imsapp.add_Supported_Features(msglist, list));
+	return cdp_avp->imsapp.add_Supported_Features_Group(
+			list, vendorid, feature_list_id, feature_list);
 }
 
-int rx_add_required_access_info(AAAMessage *req)
-{
-	if(!req)
-		return 0;
-	char x[4] = 0; // User-Location and not TimeZone
-	set_4bytes(x, data);
+// Is this actually used? If so, we can fix it, but it's probably missing a parameter in the function def
+// int rx_add_required_access_info(AAAMessage *req)
+// {
+// 	if(!req)
+// 		return 0;
+// 	char x[4] = 0; // User-Location and not TimeZone
+// 	set_4bytes(x, data);
 
-	return rx_add_avp(req, x, 4, 536, AAA_AVP_FLAG_VENDOR_SPECIFIC,
-			IMS_vendor_id_3GPP, AVP_DUPLICATE_DATA, __FUNCTION__);
-}
+// 	return rx_add_avp(req, x, 4, 536, AAA_AVP_FLAG_VENDOR_SPECIFIC,
+// 			IMS_vendor_id_3GPP, AVP_DUPLICATE_DATA, __FUNCTION__);
+// }
 
 
 /**
@@ -1665,7 +1677,7 @@ int rx_avp_process_3gpp_access_network_charging_identifier(
 		AAAMessage *msg, str *dst)
 {
 	AAA_AVP *avp = 0;
-	AAA_AVP_List list = {0};
+	AAA_AVP_LIST list = {0};
 	int i = 0;
 	if(!msg || !dst)
 		return 0;
@@ -1674,16 +1686,19 @@ int rx_avp_process_3gpp_access_network_charging_identifier(
 			break;
 	}
 	if(avp) {
-		//Ungroup the AVP?
+		// Ungroup the AVP?
 		// then do the cdp_avp.get_Access_Network_Charging_Identifier_Value();
 		list = cdpb.AAAUngroupAVPS(avp->data);
 		for(avp = list.head; avp; avp = avp->next) {
 			if(avp->code == AVP_IMS_Access_Network_Charging_Identifier_Value) {
-				dst->s = pkg_malloc(2 * (avp->data.len));
+				dst->s = pkg_malloc(
+						2 * (avp->data.len)
+						+ 1 /* because snprintf prints also a 0 after each format*/);
 				if(!dst->s)
 					break;
 				for(i = 0; i < avp->data.len; i++) {
-					snprintf(dst->s + i, 2, "%X", avp->data.s);
+					snprintf(dst->s + 2 * i, 3, "%02x",
+							((uint8_t *)avp->data.s)[i]);
 				}
 				dst->len = i + 1;
 			}

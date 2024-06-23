@@ -105,7 +105,7 @@ int rx_add_specific_action_avp(AAAMessage *msg, unsigned int data);
 //int rx_mcc_mnc_to_sip_visited(str* dst, str src);
 int rx_avp_process_3gpp_sgsn_mcc_mnc(AAAMessage *aaa, str *dst);
 int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst);
-int rx_add_supported_features(AAA_AVP_List *msglist, uint32_t vendorid,
+int rx_add_supported_features(AAA_AVP_LIST *msglist, uint32_t vendorid,
 		uint32_t feature_list_id, uint32_t feature_list);
 int rx_avp_process_3gpp_access_network_charging_identifier(
 		AAAMessage *msg, str *dst);
