@@ -1672,13 +1672,13 @@ static int w_rx_aar_register(
 					if(!ret) {
 						LM_ERR("Failed to send AAR\n");
 						lock_release(saved_t_data->lock);
-						//free the local data becuase the CDP async request was not successful (we must free here)
+						//free the local data because the CDP async request was not successful (we must free here)
 						free_saved_transaction_data(local_data);
 						goto error;
 					} else {
 						aar_sent = 1;
 						//before we send - bump up the reply counter
-						//we dont need to lock as we already hold the lock above
+						//we don't need to lock as we already hold the lock above
 						saved_t_data->answers_not_received++;
 					}
 				} else {
