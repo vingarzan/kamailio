@@ -564,7 +564,8 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 		}
 
 		req_sdp_session = get_sdp_session(req, sdp_session_num);
-		if (rpl) rpl_sdp_session = get_sdp_session(rpl, sdp_session_num);
+		if(rpl)
+			rpl_sdp_session = get_sdp_session(rpl, sdp_session_num);
 		if(!req_sdp_session) {
 			if(!req_sdp_session)
 				LM_ERR("Missing SDP session information from req\n");
@@ -575,8 +576,9 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 		for(;;) {
 			req_sdp_stream =
 					get_sdp_stream(req, sdp_session_num, sdp_stream_num);
-			if (rpl) rpl_sdp_stream =
-					get_sdp_stream(rpl, sdp_session_num, sdp_stream_num);
+			if(rpl)
+				rpl_sdp_stream =
+						get_sdp_stream(rpl, sdp_session_num, sdp_stream_num);
 			if(!req_sdp_stream) {
 				//LM_ERR("Missing SDP stream information\n");
 				break;
@@ -586,7 +588,7 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 
 				//check if the src or dst port is 0 and if so then don't add to rx
 				int intportA = atoi(req_sdp_stream->port.s);
-				if (rpl) {
+				if(rpl) {
 					int intportB = atoi(rpl_sdp_stream->port.s);
 				}
 				if(intportA != 0 && (rpl && intportB != 0)) {
@@ -689,18 +691,19 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 													 auth->u.auth.generic_data,
 								sdp_stream_num + 1, &req_sdp_stream->media,
 								&ipA, &portA, &ipB, &portB,
-								rpl?&rpl_sdp_stream->transport:0,
+								rpl ? &rpl_sdp_stream->transport : 0,
 								&req_sdp_stream->raw_stream,
-								rpl?&rpl_sdp_stream->raw_stream:0, direction,
+								rpl ? &rpl_sdp_stream->raw_stream : 0,
+								direction,
 								0 /*This is a new mcd, we are not setting it as active*/);
 
 						rx_add_media_component_description_avp(aar,
 								sdp_stream_num + 1, &req_sdp_stream->media,
 								&ipA, &portA, &ipB, &portB,
-								rpl?&rpl_sdp_stream->transport:0,
+								rpl ? &rpl_sdp_stream->transport : 0,
 								&req_sdp_stream->raw_stream,
-								rpl?&rpl_sdp_stream->raw_stream:0, direction,
-								AVP_EPC_Flow_Usage_No_Information);
+								rpl ? &rpl_sdp_stream->raw_stream : 0,
+								direction, AVP_EPC_Flow_Usage_No_Information);
 					}
 					add_flow = 1;
 				}
@@ -711,7 +714,8 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 	}
 
 	free_sdp((sdp_info_t **)(void *)&req->body);
-	if (rpl) free_sdp((sdp_info_t **)(void *)&rpl->body);
+	if(rpl)
+		free_sdp((sdp_info_t **)(void *)&rpl->body);
 
 	return 1;
 
