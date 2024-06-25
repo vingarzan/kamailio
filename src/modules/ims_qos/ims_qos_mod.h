@@ -76,4 +76,3 @@ int create_complex_return_code(int result, str visited_net_id,
 
 
 #endif /* MOD_H */
-

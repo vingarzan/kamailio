@@ -43,6 +43,7 @@ static pcontact_t *c = NULL;
 extern usrloc_api_t ul;
 extern ipsec_pcscf_api_t ipsec_pcscf;
 extern int ignore_contact_rxport_check;
+extern int ignore_contact_rxproto_check;
 extern int trust_bottom_via;
 static str *asserted_identity;
 static str *registration_contact;
@@ -158,7 +159,7 @@ int checkcontact(struct sip_msg *_m, pcontact_t *c)
 
 	if(ipsec_pcscf.ipsec_on_expire == NULL) {
 		LM_DBG("ims_ipsec_pcscf module not loaded - skipping port-uc checks\n");
-	} else {
+	} else if(!ignore_contact_rxport_check) {
 		if(c->security) {
 			switch(c->security->type) {
 				case SECURITY_IPSEC:
@@ -180,8 +181,8 @@ int checkcontact(struct sip_msg *_m, pcontact_t *c)
 			}
 		}
 
-		if(!ignore_contact_rxport_check && (c->received_port == received_port)
-				&& (security_server_port == received_port)) {
+		if(c->received_port != received_port
+				&& security_server_port != received_port) {
 			LM_DBG("check contact failed - port-uc %d is neither contact "
 				   "received_port %d, nor message received port %d\n",
 					security_server_port, c->received_port, _m->rcv.src_port);
@@ -190,7 +191,7 @@ int checkcontact(struct sip_msg *_m, pcontact_t *c)
 	}
 
 	if((ignore_reg_state || (c->reg_state == PCONTACT_REGISTERED))
-			&& (ignore_contact_rxport_check // Weird... this condition if of rxport, not rxproto!
+			&& (ignore_contact_rxproto_check
 					|| (c->received_proto == received_proto))) {
 
 		LM_DBG("Received host len %d (search %d)\n", c->received_host.len,
@@ -273,15 +274,23 @@ pcontact_t *getContactP(struct sip_msg *_m, udomain_t *_d,
 		   "[%d://%.*s:%d]\n",
 			proto, host.len, host.s, port);
 
-	if(trust_bottom_via && vb->received && vb->received->value.len > 0) {
-		received_host = vb->received->value;
+	if(trust_bottom_via) {
+		if(vb->received != NULL && vb->received->value.len > 0) {
+			received_host = vb->received->value;
+		} else {
+			received_host = vb->host;
+		}
 	} else {
 		received_host.len = ip_addr2sbuf(&_m->rcv.src_ip, srcip, sizeof(srcip));
 		received_host.s = srcip;
 	}
 	unsigned short received_port = 0;
-	if(trust_bottom_via && vb->rport && vb->rport->value.len > 0) {
-		received_port = atoi(vb->rport->value.s);
+	if(trust_bottom_via) {
+		if(vb->rport != NULL && vb->rport->value.len > 0) {
+			received_port = atoi(vb->rport->value.s);
+		} else {
+			received_port = vb->port ? vb->port : 5060;
+		}
 	} else {
 		received_port = _m->rcv.src_port;
 	}
@@ -398,7 +407,7 @@ tryagain:
 		LM_DBG("Have set the asserted_identity param to [%.*s]\n",
 				asserted_identity->len, asserted_identity->s);
 	} else {
-		LM_DBG("Asserted identity not set");
+		LM_DBG("Asserted identity not set\n");
 	}
 
 
