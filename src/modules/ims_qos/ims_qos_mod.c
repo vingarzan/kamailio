@@ -870,7 +870,8 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 				_pv_treq.msg_ctx.pid = 0;
 				_pv_treq.T = NULL;
 				_pv_treq.buf_size = t->uas.request->len + 1;
-				_pv_treq.buf = (char *)pkg_malloc(_pv_treq.buf_size * sizeof(char));
+				_pv_treq.buf =
+						(char *)pkg_malloc(_pv_treq.buf_size * sizeof(char));
 				if(_pv_treq.buf == NULL) {
 					LM_ERR("no more pkg\n");
 					_pv_treq.buf_size = 0;
@@ -909,7 +910,8 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 								|| memcmp(t->method.s, "UPDATE", 6) == 0))) {
 			if(cscf_get_content_length(msg) == 0
 					|| cscf_get_content_length(orig_sip_request_msg) == 0) {
-				LM_WARN("No SDP offer answer -> therefore we can not do Rx AAR");
+				LM_WARN("No SDP offer answer -> therefore we can not do Rx "
+						"AAR");
 				//goto aarna; //AAR na if we don't have offer/answer pair
 				return result;
 			}
@@ -1270,12 +1272,11 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 	}
 
 	LM_DBG("Sending Rx AAR");
-	if (!is_request) {
-		ret = rx_send_aar(
-			orig_sip_request_msg, msg, auth_session, direction, saved_t_data);
+	if(!is_request) {
+		ret = rx_send_aar(orig_sip_request_msg, msg, auth_session, direction,
+				saved_t_data);
 	} else {
-		ret = rx_send_aar(
-			msg, 0, auth_session, direction, saved_t_data);
+		ret = rx_send_aar(msg, 0, auth_session, direction, saved_t_data);
 	}
 	if(!ret) {
 		LM_ERR("Failed to send AAR\n");
