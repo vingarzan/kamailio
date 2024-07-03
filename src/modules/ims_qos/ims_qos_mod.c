@@ -220,7 +220,8 @@ static int pv_t_copy_msg(struct sip_msg *src, struct sip_msg *dst)
 
 
 static cmd_export_t cmds[] = {
-		{"Rx_AAR", (cmd_function)cfg_rx_aar, 4, fixup_aar, 0, ONREPLY_ROUTE},
+		{"Rx_AAR", (cmd_function)cfg_rx_aar, 4, fixup_aar, 0,
+				REQUEST | ONREPLY_ROUTE},
 		{"Rx_AAR_Register", (cmd_function)cfg_rx_aar_register, 2,
 				fixup_aar_register, 0, REQUEST_ROUTE},
 		{0, 0, 0, 0, 0, 0},
@@ -931,7 +932,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		LM_ERR("Unable to get ftag\n");
 		return result;
 	}
-	if(!cscf_get_to_tag(msg, &ttag)) {
+	if(is_request == 0 && !cscf_get_to_tag(msg, &ttag)) {
 		LM_ERR("Unable to get ttag\n");
 		return result;
 	}
@@ -966,16 +967,20 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 	saved_t_data->callid.len = callid.len;
 
 	//store ttag
-	saved_t_data->ttag.s = (char *)shm_malloc(ttag.len + 1);
-	if(!saved_t_data->ttag.s) {
-		LM_ERR("no more memory trying to save transaction state : ttag\n");
-		shm_free(saved_t_data);
-		return result;
+	if(ttag.len) {
+		saved_t_data->ttag.s = (char *)shm_malloc(ttag.len + 1);
+		if(!saved_t_data->ttag.s) {
+			LM_ERR("no more memory trying to save transaction state : ttag\n");
+			shm_free(saved_t_data);
+			return result;
+		}
+		memset(saved_t_data->ttag.s, 0, ttag.len + 1);
+		memcpy(saved_t_data->ttag.s, ttag.s, ttag.len);
+		saved_t_data->ttag.len = ttag.len;
+	} else {
+		saved_t_data->ttag.s = 0;
+		saved_t_data->ttag.len = 0;
 	}
-	memset(saved_t_data->ttag.s, 0, ttag.len + 1);
-	memcpy(saved_t_data->ttag.s, ttag.s, ttag.len);
-	saved_t_data->ttag.len = ttag.len;
-
 	//store ftag
 	saved_t_data->ftag.s = (char *)shm_malloc(ftag.len + 1);
 	if(!saved_t_data->ftag.s) {
@@ -1063,7 +1068,11 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 				}
 			} else {
 				LM_DBG("terminating direction\n");
-				uri = cscf_get_asserted_identity(msg, 0);
+				if(!is_request) {
+					uri = cscf_get_asserted_identity(msg, 0);
+				} else {
+					uri.len = 0;
+				}
 				if(uri.len == 0) {
 					LM_DBG("No P-Asserted-Identity hdr found in response. "
 						   "Using Called party id in resp");
@@ -1119,7 +1128,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		//IP
 		//if its mo we use request SDP
 		//if its mt we use reply SDP
-		if(dlg_direction == DLG_MOBILE_ORIGINATING) {
+		if(dlg_direction == DLG_MOBILE_ORIGINATING || is_request) {
 			LM_DBG("originating direction\n");
 			//get ip from request sdp (we use first SDP session)
 			if(parse_sdp(orig_sip_request_msg) < 0) {
@@ -1160,10 +1169,10 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 				}
 			}
 
-			free_sdp((sdp_info_t **)(void *)&t->uas.request->body);
+			free_sdp((sdp_info_t **)(void *)&orig_sip_request_msg->body);
 
 		} else {
-			LM_DBG("terminating direction\n");
+			LM_DBG("terminating direction and its a response\n");
 			//get ip from reply sdp (we use first SDP session)
 			if(parse_sdp(msg) < 0) {
 				LM_ERR("Unable to parse reply SDP\n");
