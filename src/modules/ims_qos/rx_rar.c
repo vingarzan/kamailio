@@ -158,7 +158,7 @@ AAAMessage *rx_process_rar(AAAMessage *request)
 					identifier = p_session_data->identifier;
 				}
 				create_complex_return_code(2001, visited_net, pani_content,
-						access_network_charging_info);
+						access_network_charging_info, request->sessionId->data);
 				qos_run_route(
 						NULL, &identifier, "event:qos_rar_access_network");
 				break;

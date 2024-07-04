@@ -1831,7 +1831,8 @@ static int fixup_aar(void **param, int param_no)
 //Alberto Diez 08.06.2024  Create a more complex return code
 //If the AAA included a Visited Network Id (it always will), and an Access-Network-Information we pass it to the config file
 int create_complex_return_code(int result, str visited_net_id,
-		str access_network_information, str access_network_charging_info)
+		str access_network_information, str access_network_charging_info,
+		str sessionId)
 {
 	int rc;
 	int_str avp_val, avp_name;
@@ -1868,6 +1869,13 @@ int create_complex_return_code(int result, str visited_net_id,
 		avp_name.s.s = "anci";
 		avp_name.s.len = 4;
 		avp_val.s = access_network_charging_info;
+		add_avp(AVP_NAME_STR | AVP_VAL_STR, avp_name, avp_val);
+	}
+
+	if(sessionId.s && sessionId.len > 0) {
+		avp_name.s.s = "RxSessionId";
+		avp_name.s.len = 11;
+		avp_val.s = sessionId;
 		add_avp(AVP_NAME_STR | AVP_VAL_STR, avp_name, avp_val);
 	}
 

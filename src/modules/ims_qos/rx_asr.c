@@ -47,6 +47,7 @@
  * History:
  * --------
  *  2011-02-02  initial version (jason.penton)
+ *  2024-04-07  update so that it actually does something (Alberto Diez)
  */
 
 
@@ -61,6 +62,8 @@
 #include "../../lib/ims/ims_getters.h"
 #include "ims_qos_stats.h"
 
+#include "rx_rar.h"
+
 extern struct ims_qos_counters_h ims_qos_cnts_h;
 
 /*
@@ -74,7 +77,7 @@ AAAMessage *rx_process_asr(AAAMessage *request)
 {
 	AAASession *session;
 	unsigned int code = 0;
-
+	int_str avp_val, avp_name;
 	rx_authsessiondata_t *p_session_data = 0;
 
 	if(!request || !request->sessionId)
@@ -88,19 +91,28 @@ AAAMessage *rx_process_asr(AAAMessage *request)
 		LM_DBG("received an ASR but the session is already deleted\n");
 		return 0;
 	}
+	//Promote RxSessionId to config file
+	avp_name.s.s = "RxSessionId";
+	avp_name.s.len = 11;
+	avp_val.s = session->id;
+	add_avp(AVP_NAME_STR | AVP_VAL_STR, avp_name, avp_val);
 
 	code = rx_get_abort_cause(request);
-	LM_DBG("abort-cause code is %u\n", code);
-
-	LM_DBG("PCRF requested an ASR");
-
+	LM_DBG("PCRF requested an ASR with abort-cause code is %u\n", code);
+	//promote the abort cause to config file
+	avp_name.s.s = "abortCause";
+	avp_name.s.len = 10;
+	avp_val.n = (long)code;
+	add_avp(AVP_NAME_STR | AVP_VAL_STR, avp_name, avp_val);
 
 	p_session_data = (rx_authsessiondata_t *)session->u.auth.generic_data;
 	if(p_session_data->subscribed_to_signaling_path_status) {
 		LM_DBG("This is a subscription to signalling status\n");
+		qos_run_route(NULL, &identifier, "event:qos_asr_registration");
 	} else {
 		LM_DBG("This is a normal media bearer -  bearer is released by CDP "
 			   "callbacks\n");
+		qos_run_route(NULL, &identifier, "event:qos_asr_call");
 	}
 	cdpb.AAASessionsUnlock(session->hash);
 	return 0;

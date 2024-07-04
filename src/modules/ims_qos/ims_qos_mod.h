@@ -72,7 +72,8 @@ int create_return_code(int result);
 
 //Alberto Diez 09.06.2024
 int create_complex_return_code(int result, str visited_net_id,
-		str access_network_information, str access_network_charging_info);
+		str access_network_information, str access_network_charging_info,
+		str sessionId);
 
 
 #endif /* MOD_H */

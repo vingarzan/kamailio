@@ -111,6 +111,12 @@ void async_aar_callback(
 	rx_authsessiondata_t *p_session_data = 0;
 	AAASession *auth = 0;
 
+	//Alberto Diez 08.06.2024
+	str visited_network_id = {0};
+	str access_network_information = {0};
+	str access_network_charging_info = {0};
+	str sessionId = {0};
+
 	LM_DBG("Received AAR callback\n");
 	saved_transaction_t *data = (saved_transaction_t *)param;
 
@@ -152,6 +158,12 @@ void async_aar_callback(
 		goto error;
 	}
 
+	rx_avp_process_3gpp_sgsn_mcc_mnc(aaa, &visited_network_id);
+	rx_avp_process_3gpp_user_location_information(
+			aaa, &access_network_information);
+	rx_avp_process_3gpp_access_network_charging_identifier(
+			aaa, &access_network_charging_info);
+
 	if(cdp_result >= 2000 && cdp_result < 3000) {
 		LM_DBG("Success, received code: [%i] from PCRF for AAR request\n",
 				cdp_result);
@@ -164,6 +176,8 @@ void async_aar_callback(
 
 		LM_DBG("Auth session ID [%.*s]", aaa->sessionId->data.len,
 				aaa->sessionId->data.s);
+
+		sessionId = aaa->sessionId->data;
 
 		if(!data->aar_update) {
 			LM_DBG("This is an AAA response to an initial AAR");
@@ -218,15 +232,27 @@ void async_aar_callback(
 	}
 
 	//set success response code AVP
-	create_return_code(result);
+	create_complex_return_code(result, visited_network_id,
+			access_network_information, access_network_charging_info,
+			sessionId);
+
 	goto done;
 
 out_of_memory:
 error:
 	//set failure response code
-	create_return_code(result);
+	create_complex_return_code(result, visited_network_id,
+			access_network_information, access_network_charging_info,
+			sessionId);
+
 
 done:
+	if(access_network_charging_info.s)
+		pkg_free(access_network_charging_info.s);
+	if(visited_network_id.s)
+		pkg_free(visited_network_id.s);
+	if(access_network_information.s)
+		pkg_free(access_network_information.s);
 	if(t)
 		tmb.unref_cell(t);
 	//free memory
@@ -257,6 +283,7 @@ void async_aar_reg_callback(
 	str visited_network_id = {0};
 	str access_network_information = {0};
 	str access_network_charging_info = {0};
+	str sessionId = {0};
 
 	LM_DBG("Received AAR callback\n");
 	saved_transaction_local_t *local_data = (saved_transaction_local_t *)param;
@@ -317,7 +344,9 @@ void async_aar_reg_callback(
 		LM_ERR("Failed to process AAA from PCRF\n"); //puri.host.len, puri.host.s);
 		goto error;
 	}
-	//Alberto Diez 08.06.2024 extracting P-Visited-Network-Id and Access-Network-Info
+	//Alberto Diez 08.06.2024 extracting P-Visited-Network-Id and Access-Network-Info and other parametes to promote to config file
+	if(aaa->sessionId)
+		sessionId = aaa->sessionId->data;
 
 	rx_avp_process_3gpp_sgsn_mcc_mnc(aaa, &visited_network_id);
 	rx_avp_process_3gpp_user_location_information(
@@ -335,7 +364,8 @@ void async_aar_reg_callback(
 				   "successful\n");
 			result = CSCF_RETURN_TRUE;
 			create_complex_return_code(result, visited_network_id,
-					access_network_information, access_network_charging_info);
+					access_network_information, access_network_charging_info,
+					sessionId);
 			goto done;
 		}
 
@@ -433,13 +463,15 @@ void async_aar_reg_callback(
 
 	//set success response code AVP and other exported AVPs
 	create_complex_return_code(result, visited_network_id,
-			access_network_information, access_network_charging_info);
+			access_network_information, access_network_charging_info,
+			sessionId);
 	goto done;
 
 error:
 	//set failure response code
 	create_complex_return_code(result, visited_network_id,
-			access_network_information, access_network_charging_info);
+			access_network_information, access_network_charging_info,
+			sessionId);
 
 
 done:

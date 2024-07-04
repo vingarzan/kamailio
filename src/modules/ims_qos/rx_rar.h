@@ -31,5 +31,6 @@
 #define RX_RAR_H
 
 AAAMessage *rx_process_rar(AAAMessage *request);
+static void qos_run_route(sip_msg_t *msg, str *uri, char *route);
 
 #endif
