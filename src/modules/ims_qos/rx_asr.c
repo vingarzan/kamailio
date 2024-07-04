@@ -79,6 +79,7 @@ AAAMessage *rx_process_asr(AAAMessage *request)
 	unsigned int code = 0;
 	int_str avp_val, avp_name;
 	rx_authsessiondata_t *p_session_data = 0;
+	str identifier = {0};
 
 	if(!request || !request->sessionId)
 		return 0;

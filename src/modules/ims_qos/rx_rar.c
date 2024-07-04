@@ -48,7 +48,7 @@ extern cdp_avp_bind_t *cdp_avp;
 /**
  * This function calls a route in the config file
  */
-static void qos_run_route(sip_msg_t *msg, str *uri, char *route)
+void qos_run_route(sip_msg_t *msg, str *uri, char *route)
 {
 	int rt;
 	//this is declared in kamailio main files

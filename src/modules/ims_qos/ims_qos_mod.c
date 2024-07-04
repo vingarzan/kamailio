@@ -221,7 +221,7 @@ static int pv_t_copy_msg(struct sip_msg *src, struct sip_msg *dst)
 
 static cmd_export_t cmds[] = {
 		{"Rx_AAR", (cmd_function)cfg_rx_aar, 4, fixup_aar, 0,
-				REQUEST | ONREPLY_ROUTE},
+				REQUEST_ROUTE | ONREPLY_ROUTE},
 		{"Rx_AAR_Register", (cmd_function)cfg_rx_aar_register, 2,
 				fixup_aar_register, 0, REQUEST_ROUTE},
 		{0, 0, 0, 0, 0, 0},
