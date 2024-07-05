@@ -57,8 +57,6 @@
 #include "../../core/parser/parse_uri.h"
 #include "../../core/parser/parse_content.h"
 #include "../ims_usrloc_pcscf/usrloc.h"
-#include "../../modules/ims_dialog/dlg_load.h"
-#include "../../modules/ims_dialog/dlg_hash.h"
 #include "../cdp/cdp_load.h"
 #include "../cdp_avp/cdp_avp_mod.h"
 #include "../../core/cfg/cfg_struct.h"
@@ -95,7 +93,6 @@ int authorize_video_flow =
 
 struct tm_binds tmb;
 struct cdp_binds cdpb;
-ims_dlg_api_t dlgb;
 bind_usrloc_t bind_usrloc;
 cdp_avp_bind_t *cdp_avp;
 usrloc_api_t ul;
@@ -309,12 +306,6 @@ static int mod_init(void)
 		goto error;
 	}
 
-	/* load the dialog API */
-	if(load_ims_dlg_api(&dlgb) != 0) {
-		LM_ERR("can't load Dialog API\n");
-		goto error;
-	}
-
 	cdp_avp = load_cdp_avp();
 	if(!cdp_avp) {
 		LM_ERR("can't load CDP_AVP API\n");
@@ -485,7 +476,10 @@ AAAMessage *callback_cdp_request(AAAMessage *request, void *param)
 }
 
 const str match_cseq_method = {"INVITE", 6};
-
+/*
+//Here there is a dialog callback which is called both when a response is received and then it checks its a 183 or 200 and checks if there are SDP changes
+//Or when there is a termination of the dialog that it calls the function rx_send_str(rx_session_id) that now we will call from the config file when a dialog
+// is terminated or expired
 void callback_dialog(
 		struct dlg_cell *dlg, int type, struct dlg_cb_params *params)
 {
@@ -674,7 +668,7 @@ error:
 		cdpb.AAASessionsUnlock(auth->hash);
 	return;
 }
-
+*/
 void callback_pcscf_contact_cb(struct pcontact *c, int type, void *param)
 {
 	LM_DBG("----------------------!\n");
@@ -784,7 +778,6 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 	sdp_stream_cell_t *sdp_stream;
 	str s_id;
 	struct hdr_field *h = 0;
-	struct dlg_cell *dlg = 0;
 
 	cfg_action_t *cfg_action = 0;
 	saved_transaction_t *saved_t_data =
@@ -1002,6 +995,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		return result;
 	}
 
+	/** Removing this check, we have to trust that we don't have a session for this dialog
 	//Check that we don't already have an auth session for this specific dialog
 	//if not we create a new one and attach it to the dialog (via session ID).
 	enum dialog_direction dlg_direction = get_dialog_direction(direction);
@@ -1022,10 +1016,9 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 			auth_session = 0;
 		}
 	}
-
+	*/
 	if(!auth_session) {
 		LM_DBG("New AAR session for this dialog in mode %s\n", direction);
-
 
 		//get ip and subscription_id and store them in the call session data
 
@@ -1084,33 +1077,19 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 						LM_ERR("No P-Called-Party hdr found in response. Using "
 							   "req URI from dlg - we shouldn't have to do "
 							   "this");
-						//get dialog and get the req URI from there
-						dlg = dlgb.get_dlg(msg);
-						if(!dlg) {
-							if(!cscf_get_to_uri(orig_sip_request_msg, &uri)) {
-								LM_ERR("Error assigning P-Asserted-Identity "
-									   "using To hdr in req");
-								goto error;
-							}
-							LM_DBG("going to remove parameters if any from "
-								   "identity: [%.*s]\n",
-									uri.len, uri.s);
-							get_identifier(&uri);
-							LM_DBG("identifier from uri : [%.*s]\n",
-									identifier.len, identifier.s);
-						} else {
-							LM_DBG("dlg req uri : [%.*s] going to remove "
-								   "parameters if any\n",
-									dlg->req_uri.len, dlg->req_uri.s);
-
-							if(get_identifier(&dlg->req_uri) != 0) {
-								dlgb.release_dlg(dlg);
-								goto error;
-							}
-							dlgb.release_dlg(dlg);
-							LM_DBG("identifier from dlg req uri : [%.*s]\n",
-									identifier.len, identifier.s);
+						//We get hte request uri of origin sip request
+						if(!cscf_get_to_uri(orig_sip_request_msg, &uri)) {
+							LM_ERR("Error assigning P-Asserted-Identity "
+								   "using To hdr in req");
+							goto error;
 						}
+						LM_DBG("going to remove parameters if any from "
+							   "identity: [%.*s]\n",
+								uri.len, uri.s);
+						get_identifier(&uri);
+						LM_DBG("identifier from uri : [%.*s]\n", identifier.len,
+								identifier.s);
+
 					} else {
 						get_identifier(&uri);
 					}
@@ -1236,16 +1215,6 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		}
 		auth_session->u.auth.class = AUTH_CLASS_RXMEDIA;
 
-		//attach new cdp auth session to dlg for this direction
-		if(dlg_direction == DLG_MOBILE_ORIGINATING) {
-			dlgb.set_dlg_var(&callid, &ftag, &ttag, &orig_session_key,
-					&auth_session->id);
-		} else {
-			dlgb.set_dlg_var(&callid, &ftag, &ttag, &term_session_key,
-					&auth_session->id);
-		}
-		LM_DBG("Attached CDP auth session [%.*s] for Rx to dialog in %s mode\n",
-				auth_session->id.len, auth_session->id.s, direction);
 	} else {
 		LM_DBG("Update AAR session for this dialog in mode %s\n", direction);
 		//check if this is triggered by a 183 - if so break here as it is probably a re-transmit
@@ -1259,13 +1228,6 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		saved_t_data->aar_update =
 				1; //this is an update aar - we set this so on async_aar we know this is an update and act accordingly
 	}
-	//TODO solve the issue with Dialog
-	dlg = dlgb.get_dlg(msg);
-	if(!dlg) {
-		LM_ERR("Unable to find dialog and cannot do Rx without it\n");
-		goto error;
-	}
-	saved_t_data->dlg = dlg;
 
 	if(_ims_qos_suspend_transaction) {
 		LM_DBG("Suspending SIP TM transaction\n");
@@ -1881,6 +1843,37 @@ int create_complex_return_code(int result, str visited_net_id,
 
 	return rc;
 }
+/**
+ *  Creates the AVPs for Call-ID, FTag and ToTag to promote a Dialog event to the config file
+ */
+void create_avps_for_dialog_event(str *callid, str *ftag, str *ttag)
+{
+	int_str avp_val, avp_name;
+	avp_name.s.s = "aar_return_code";
+	avp_name.s.len = 15;
+
+	if(callid && callid->s && callid->len > 0) {
+		avp_name.s.s = "CallId";
+		avp_name.s.len = 6;
+		avp_val.s = *callid;
+		add_avp(AVP_NAME_STR | AVP_VAL_STR, avp_name, avp_val);
+	}
+
+	if(ftag && ftag->s && ftag->len > 0) {
+		avp_name.s.s = "fromTag";
+		avp_name.s.len = 7;
+		avp_val.s = *ftag;
+		add_avp(AVP_NAME_STR | AVP_VAL_STR, avp_name, avp_val);
+	}
+
+	if(ttag && ttag->s && ttag->len > 0) {
+		avp_name.s.s = "toTag";
+		avp_name.s.len = 5;
+		avp_val.s = *ttag;
+		add_avp(AVP_NAME_STR | AVP_VAL_STR, avp_name, avp_val);
+	}
+}
+
 
 /*create a return code to be passed back into config file*/
 int create_return_code(int result)
@@ -1973,4 +1966,52 @@ int mod_register(char *path, int *dlflags, void *p1, void *p2)
 {
 	sr_kemi_modules_add(sr_kemi_ims_qos_exports);
 	return 0;
+}
+
+
+/**
+ * This function calls a route in the config file
+ */
+void qos_run_route(sip_msg_t *msg, str *uri, char *route)
+{
+	int rt;
+	//this is declared in kamailio main files
+	struct run_act_ctx ctx = {0};
+	sip_msg_t *fmsg = 0;
+	// str evname = {0};
+
+	if(route == NULL) {
+		LM_ERR("bad route\n");
+		return;
+	}
+
+	LM_DBG("executing event_route[%s]\n", route);
+
+	rt = -1;
+	//event_rt is declared in one of the main kamailio files
+	rt = route_lookup(&event_rt, route);
+	if(rt < 0 || event_rt.rlist[rt] == NULL) {
+		LM_DBG("route does not exist");
+		return;
+	}
+
+	//this are also in the main kamailio file
+	if(msg == NULL) {
+		if(faked_msg_init() < 0) {
+			LM_ERR("faked_msg_init() failed\n");
+			return;
+		}
+		fmsg = faked_msg_next();
+		fmsg->parsed_orig_ruri_ok = 0;
+		if(uri)
+			fmsg->new_uri = *uri;
+	} else {
+		fmsg = msg;
+	}
+
+	if(rt >= 0) {
+		set_route_type(EVENT_ROUTE);
+		init_run_actions_ctx(&ctx);
+		run_top_route(event_rt.rlist[rt], fmsg, 0);
+	}
 }

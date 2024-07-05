@@ -74,7 +74,6 @@ typedef struct saved_transaction
 	str ftag;
 	str ttag;
 	unsigned int aar_update;
-	struct dlg_cell *dlg;
 } saved_transaction_t;
 
 typedef struct saved_transaction_local

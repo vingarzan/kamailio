@@ -45,52 +45,6 @@ extern cdp_avp_bind_t *cdp_avp;
 
 #define ACCESS_NETWORK_INFO_REPORT 12
 
-/**
- * This function calls a route in the config file
- */
-void qos_run_route(sip_msg_t *msg, str *uri, char *route)
-{
-	int rt;
-	//this is declared in kamailio main files
-	struct run_act_ctx ctx = {0};
-	sip_msg_t *fmsg = 0;
-	// str evname = {0};
-
-	if(route == NULL) {
-		LM_ERR("bad route\n");
-		return;
-	}
-
-	LM_DBG("executing event_route[%s]\n", route);
-
-	rt = -1;
-	//event_rt is declared in one of the main kamailio files
-	rt = route_lookup(&event_rt, route);
-	if(rt < 0 || event_rt.rlist[rt] == NULL) {
-		LM_DBG("route does not exist");
-		return;
-	}
-
-	//this are also in the main kamailio file
-	if(msg == NULL) {
-		if(faked_msg_init() < 0) {
-			LM_ERR("faked_msg_init() failed\n");
-			return;
-		}
-		fmsg = faked_msg_next();
-		fmsg->parsed_orig_ruri_ok = 0;
-		fmsg->new_uri = *uri;
-	} else {
-		fmsg = msg;
-	}
-
-	if(rt >= 0) {
-		set_route_type(EVENT_ROUTE);
-		init_run_actions_ctx(&ctx);
-		run_top_route(event_rt.rlist[rt], fmsg, 0);
-	}
-}
-
 
 /** 
  * This function is called when receiving a RAR, it checks the Session-Id to

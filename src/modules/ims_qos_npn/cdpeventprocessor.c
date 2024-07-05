@@ -46,7 +46,6 @@
 #include <time.h>
 #include "sem.h"
 #include "../ims_usrloc_pcscf/usrloc.h"
-#include "../ims_dialog/dlg_load.h"
 #include "../cdp/session.h"
 #include "ims_qos_mod.h"
 #include "cdpeventprocessor.h"
@@ -55,7 +54,6 @@
 
 cdp_cb_event_list_t *cdp_event_list = 0;
 extern usrloc_api_t ul;
-extern ims_dlg_api_t dlgb;
 extern int cdp_event_latency;
 extern int cdp_event_threshold;
 extern int cdp_event_latency_loglevel;
@@ -348,10 +346,11 @@ void cdp_cb_event_process()
 								p_session_data->ftag.s,
 								p_session_data->ttag.len,
 								p_session_data->ttag.s);
-						dlgb.terminate_dlg(&p_session_data->callid,
-								&p_session_data->ftag, &p_session_data->ttag,
-								&confirmed_qosrelease_headers,
-								&early_qosrelease_reason);
+						//There were other parameters like the reason etc.
+						create_avps_for_dialog_event(&p_session_data->callid,
+								&p_session_data->ftag, &p_session_data->ttag);
+						qos_run_route(NULL, &p_session_data->identifier,
+								"event:qos_terminate_dialog");
 					}
 				}
 

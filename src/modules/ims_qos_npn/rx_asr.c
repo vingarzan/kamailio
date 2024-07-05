@@ -53,7 +53,6 @@
 
 #include "../cdp_avp/cdp_avp_mod.h"
 
-#include "../../modules/ims_dialog/dlg_load.h"
 #include "../ims_usrloc_pcscf/usrloc.h"
 #include "rx_authdata.h"
 
@@ -62,7 +61,7 @@
 #include "../../lib/ims/ims_getters.h"
 #include "ims_qos_stats.h"
 
-#include "rx_rar.h"
+#include "ims_qos_mod.h"
 
 extern struct ims_qos_counters_h ims_qos_cnts_h;
 
@@ -109,11 +108,14 @@ AAAMessage *rx_process_asr(AAAMessage *request)
 	p_session_data = (rx_authsessiondata_t *)session->u.auth.generic_data;
 	if(p_session_data->subscribed_to_signaling_path_status) {
 		LM_DBG("This is a subscription to signalling status\n");
-		qos_run_route(NULL, &identifier, "event:qos_asr_registration");
+		qos_run_route(NULL, &p_session_data->registration_aor,
+				"event:qos_asr_registration");
 	} else {
 		LM_DBG("This is a normal media bearer -  bearer is released by CDP "
 			   "callbacks\n");
-		qos_run_route(NULL, &identifier, "event:qos_asr_call");
+		create_avps_for_dialog_event(&p_session_data->callid,
+				&p_session_data->ftag, &p_session_data->ttag);
+		qos_run_route(NULL, &p_session_data->identifier, "event:qos_asr_call");
 	}
 	cdpb.AAASessionsUnlock(session->hash);
 	return 0;

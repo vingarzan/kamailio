@@ -75,5 +75,10 @@ int create_complex_return_code(int result, str visited_net_id,
 		str access_network_information, str access_network_charging_info,
 		str sessionId);
 
+//This function is used to call a route in the config file, avps must have been created previously
+void qos_run_route(sip_msg_t *msg, str *uri, char *route);
+
+//This function creates AVPs for a dialog event
+void create_avps_for_dialog_event(str *callid, str *ftag, str *ttag);
 
 #endif /* MOD_H */
