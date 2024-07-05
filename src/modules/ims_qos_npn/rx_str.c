@@ -182,3 +182,24 @@ error:
 
 	return CSCF_RETURN_FALSE;
 }
+
+static int fixup_str(void **param, int param_no)
+{
+	if(strlen((char *)*param) <= 0) {
+		LM_ERR("empty parameter %d not allowed\n", param_no);
+		return -1;
+	}
+
+	if(param_no == 1) { //sessionID - static or dynamic string (config vars)
+		if(fixup_spve_null(param, param_no) < 0)
+			return -1;
+		return 0;
+	} else if(param_no == 2) {
+		//this may be a route
+		if(fixup_spve_null(param, param_no) < 0)
+			return -1;
+		return 0;
+	}
+
+	return 0;
+}

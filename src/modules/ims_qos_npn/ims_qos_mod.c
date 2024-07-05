@@ -136,6 +136,7 @@ static void mod_destroy(void);
 
 static int fixup_aar_register(void **param, int param_no);
 static int fixup_aar(void **param, int param_no);
+static int fixup_str(void **param, int param_no);
 
 int *callback_singleton; /*< Callback singleton */
 
@@ -180,6 +181,8 @@ static int cfg_rx_aar(
 		struct sip_msg *msg, char *route, char *dir, char *id, int id_type);
 static int cfg_rx_aar_register(struct sip_msg *msg, char *route, char *str1);
 
+static int cfg_rx_str(struct sip_msg *msg, char *sessionId, char *route);
+
 struct _pv_req_data
 {
 	struct cell *T;
@@ -221,6 +224,8 @@ static cmd_export_t cmds[] = {
 				REQUEST_ROUTE | ONREPLY_ROUTE},
 		{"Rx_AAR_Register", (cmd_function)cfg_rx_aar_register, 2,
 				fixup_aar_register, 0, REQUEST_ROUTE},
+		{"Rx_STR", (cmd_function)cfg_rx_str, 4, fixup_str, 0,
+				REQUEST_ROUTE | ONREPLY_ROUTE},
 		{0, 0, 0, 0, 0, 0},
 };
 
@@ -1789,7 +1794,37 @@ static int fixup_aar(void **param, int param_no)
 
 	return 0;
 }
+static int fixup_str(void **param, int param_no)
+{
+	if(strlen((char *)*param) <= 0) {
+		LM_ERR("empty parameter %d not allowed\n", param_no);
+		return -1;
+	}
 
+	if(param_no == 1) { //sessionID - static or dynamic string (config vars)
+		if(fixup_spve_null(param, param_no) < 0)
+			return -1;
+		return 0;
+	} else if(param_no == 2) {
+		//this may be a route
+		if(fixup_spve_null(param, param_no) < 0)
+			return -1;
+		return 0;
+	}
+
+	return 0;
+}
+//This function sends an STR to the sessionID, when the STA arrives the system is going to call a callback.
+static int cfg_rx_str(struct sip_msg *msg, char *sessionId, char *route);
+{
+	str rx_session_id;
+	if(!sessionId)
+		return 0;
+	rx_session_id.s = sessionId;
+	rx_session_id.len = strlen(sessionId);
+	//TODO implement that rx_send_str_with_callback where we can call the route on the STA, right now we don't
+	return rx_send_str(&rx_session_id);
+}
 //Alberto Diez 08.06.2024  Create a more complex return code
 //If the AAA included a Visited Network Id (it always will), and an Access-Network-Information we pass it to the config file
 int create_complex_return_code(int result, str visited_net_id,
