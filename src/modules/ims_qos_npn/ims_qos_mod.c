@@ -753,14 +753,14 @@ uint16_t check_ip_version(str ip)
 /* Wrapper to send AAR from config file - this only allows for AAR for calls - not register, which uses r_rx_aar_register
  * return: 1 - success, <=0 failure. 2 - message not an AAR generating message (ie proceed without PCC if you wish)
  */
-static int cfg_rx_aar(
-		struct sip_msg *msg, char *route, char *dir, char *c_id, int id_type)
+static int cfg_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
+		int id_type, char *sessionId)
 {
-	return w_rx_aar(msg, route, dir, c_id, id_type, 0);
+	return w_rx_aar(msg, route, dir, c_id, id_type, 0, sessionId);
 }
 
 static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
-		int id_type, int cfg_type)
+		int id_type, int cfg_type, char *sessionId)
 {
 
 	int ret = CSCF_RETURN_ERROR;
@@ -770,7 +770,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 
 	AAASession *auth_session = 0;
 	rx_authsessiondata_t *rx_authdata_p = 0;
-	str *rx_session_id = 0;
+	str rx_session_id = 0;
 	str callid = {0, 0};
 	str ftag = {0, 0};
 	str ttag = {0, 0};
@@ -1000,19 +1000,12 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		return result;
 	}
 
-	/** Removing this check, we have to trust that we don't have a session for this dialog
-	//Check that we don't already have an auth session for this specific dialog
-	//if not we create a new one and attach it to the dialog (via session ID).
-	enum dialog_direction dlg_direction = get_dialog_direction(direction);
-	if(dlg_direction == DLG_MOBILE_ORIGINATING) {
-		rx_session_id =
-				dlgb.get_dlg_var(&callid, &ftag, &ttag, &orig_session_key);
-	} else {
-		rx_session_id =
-				dlgb.get_dlg_var(&callid, &ftag, &ttag, &term_session_key);
+	if(sessionId) {
+		rx_session_id.s = sessionId;
+		rx_session_id.len = strlen(sessionId.s);
 	}
-	if(rx_session_id && rx_session_id->len > 0 && rx_session_id->s) {
-		auth_session = cdpb.AAAGetAuthSession(*rx_session_id);
+	if(rx_session_id.len > 0 && rx_session_id.s) {
+		auth_session = cdpb.AAAGetAuthSession(rx_session_id);
 		if(auth_session && auth_session->u.auth.state != AUTH_ST_OPEN) {
 			LM_DBG("This session is not state open - so we will create a new "
 				   "session");
@@ -1021,7 +1014,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 			auth_session = 0;
 		}
 	}
-	*/
+
 	if(!auth_session) {
 		LM_DBG("New AAR session for this dialog in mode %s\n", direction);
 
@@ -1772,7 +1765,9 @@ static int fixup_aar(void **param, int param_no)
 		return -1;
 	}
 
-	if(param_no == 1) { //route name - static or dynamic string (config vars)
+	if(param_no == 1
+			|| param_no
+					   == 5) { //route name - static or dynamic string (config vars)   // param 5 is SessionID
 		if(fixup_spve_null(param, param_no) < 0)
 			return -1;
 		return 0;
