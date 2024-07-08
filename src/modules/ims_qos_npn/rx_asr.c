@@ -109,13 +109,13 @@ AAAMessage *rx_process_asr(AAAMessage *request)
 	if(p_session_data->subscribed_to_signaling_path_status) {
 		LM_DBG("This is a subscription to signalling status\n");
 		qos_run_route(NULL, &p_session_data->registration_aor,
-				"event:qos_asr_registration");
+				"qos:asr_registration");
 	} else {
 		LM_DBG("This is a normal media bearer -  bearer is released by CDP "
 			   "callbacks\n");
 		create_avps_for_dialog_event(&p_session_data->callid,
 				&p_session_data->ftag, &p_session_data->ttag);
-		qos_run_route(NULL, &p_session_data->identifier, "event:qos_asr_call");
+		qos_run_route(NULL, &p_session_data->identifier, "qos:asr_call");
 	}
 	cdpb.AAASessionsUnlock(session->hash);
 	return 0;

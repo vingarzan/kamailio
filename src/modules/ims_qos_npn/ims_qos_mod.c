@@ -1888,7 +1888,7 @@ void create_avps_for_dialog_event(str *callid, str *ftag, str *ttag)
 	avp_name.s.len = 15;
 
 	if(callid && callid->s && callid->len > 0) {
-		avp_name.s.s = "CallId";
+		avp_name.s.s = "callId";
 		avp_name.s.len = 6;
 		avp_val.s = *callid;
 		add_avp(AVP_NAME_STR | AVP_VAL_STR, avp_name, avp_val);

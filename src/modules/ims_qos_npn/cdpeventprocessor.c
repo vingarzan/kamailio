@@ -350,7 +350,7 @@ void cdp_cb_event_process()
 						create_avps_for_dialog_event(&p_session_data->callid,
 								&p_session_data->ftag, &p_session_data->ttag);
 						qos_run_route(NULL, &p_session_data->identifier,
-								"event:qos_terminate_dialog");
+								"qos:terminate_dialog");
 					}
 				}
 
