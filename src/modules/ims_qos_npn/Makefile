@@ -5,7 +5,7 @@
 
 include ../../Makefile.defs
 auto_gen=
-NAME=ims_qos.so
+NAME=ims_qos_npn.so
 LIBS=
 
 SERLIBPATH=../../lib

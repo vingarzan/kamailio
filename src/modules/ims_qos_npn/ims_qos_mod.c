@@ -69,6 +69,7 @@
 #include "ims_qos_mod.h"
 #include "../../core/parser/sdp/sdp.h"
 #include "../../core/kemi.h"
+#include "../../core/fmsg.h"
 
 #include "../../lib/ims/useful_defs.h"
 #include "ims_qos_stats.h"
@@ -1810,7 +1811,7 @@ static int fixup_str(void **param, int param_no)
 	return 0;
 }
 //This function sends an STR to the sessionID, when the STA arrives the system is going to call a callback.
-static int cfg_rx_str(struct sip_msg *msg, char *sessionId, char *route);
+static int cfg_rx_str(struct sip_msg *msg, char *sessionId, char *route)
 {
 	str rx_session_id;
 	if(!sessionId)
