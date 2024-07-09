@@ -79,6 +79,8 @@ extern int _ims_qos_suspend_transaction;
 
 extern str af_signaling_ip;
 extern str af_signaling_ip6;
+extern str af_signaling_port_pc;
+extern str af_signaling_port_ps;
 extern str component_media_type;
 extern str flow_protocol;
 extern ims_qos_params_t _imsqos_params;
@@ -1136,10 +1138,8 @@ int rx_send_aar_register(struct sip_msg *msg, AAASession *auth,
 			goto error;
 	}
 
-	/* Add Subscription ID AVP*/
-
+	/* Add Subscription ID AVP */
 	identifier = cscf_get_public_identity(msg);
-
 	int identifier_type =
 			AVP_Subscription_Id_Type_SIP_URI; //we only do IMPU now
 	rx_add_subscription_id_avp(aar, identifier, identifier_type);
@@ -1150,15 +1150,15 @@ int rx_send_aar_register(struct sip_msg *msg, AAASession *auth,
 	raw_stream.s = 0;
 	raw_stream.len = 0;
 
-	char c_port_from[10];
-	str port_from;
-	port_from.len = snprintf(c_port_from, 10, "%u", saved_t_data->via_port);
-	port_from.s = c_port_from;
+	char c_port_us[10];
+	str port_us;
+	port_us.len = snprintf(c_port_us, 10, "%u", saved_t_data->via_port);
+	port_us.s = c_port_us;
 
-	char c_port_to[10];
-	str port_to;
-	port_to.len = snprintf(c_port_to, 10, "%u", saved_t_data->recv_port);
-	port_to.s = c_port_to;
+	char c_port_uc[10];
+	str port_uc;
+	port_uc.len = snprintf(c_port_uc, 10, "%u", saved_t_data->recv_port);
+	port_uc.s = c_port_uc;
 
 	via_host.len = saved_t_data->via_host.len;
 	via_host.s = saved_t_data->via_host.s;
@@ -1175,11 +1175,17 @@ int rx_send_aar_register(struct sip_msg *msg, AAASession *auth,
 	}
 
 	//rx_add_media_component_description_avp_register(aar);
-	/* Add media component description avp for register*/
+	/* Add media component description avp for register - port-pc <-> port-us */
 	rx_add_media_component_description_avp(aar, 1, &component_media_type,
-			&via_host, &port_from,
+			&via_host, &port_us,
 			ip_version == AF_INET ? &af_signaling_ip : &af_signaling_ip6,
-			&port_to, &flow_protocol, &raw_stream, &raw_stream,
+			&af_signaling_port_pc, &flow_protocol, &raw_stream, &raw_stream,
+			_imsqos_params.dlg_direction, AVP_EPC_Flow_Usage_AF_Signaling);
+	/* Add media component description avp for register - port-uc <-> port-ps */
+	rx_add_media_component_description_avp(aar, 2, &component_media_type,
+			&via_host, &port_uc,
+			ip_version == AF_INET ? &af_signaling_ip : &af_signaling_ip6,
+			&af_signaling_port_ps, &flow_protocol, &raw_stream, &raw_stream,
 			_imsqos_params.dlg_direction, AVP_EPC_Flow_Usage_AF_Signaling);
 
 	/* Add specific action AVP's */

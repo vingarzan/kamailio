@@ -162,6 +162,11 @@ str rx_forced_peer = str_init("");
 str af_signaling_ip = str_init("127.0.0.1");
 /* P-CSCF IPv6 address to generate the flows for the UE<->PCSCF signaling path */
 str af_signaling_ip6 = str_init("");
+/* P-CSCF Port-PC to generate the flows form the PCSCF<->UE signaling path */
+str af_signaling_port_pc = str_init("5062");
+/* P-CSCF Port-PC to generate the flows form the UE<->P-CSCF signaling path */
+str af_signaling_port_ps = str_init("5063");
+
 
 str component_media_type = str_init("control");
 str flow_protocol = str_init("IP");
@@ -234,10 +239,12 @@ static param_export_t params[] = {
 		{"rx_dest_realm", PARAM_STR, &rx_dest_realm},
 		{"rx_forced_peer", PARAM_STR, &rx_forced_peer},
 		{"rx_auth_expiry", INT_PARAM, &rx_auth_expiry},
-		{"af_signaling_ip", PARAM_STR,
-				&af_signaling_ip}, /* IP of this P-CSCF, to be used in the flow for the AF-signaling */
-		{"af_signaling_ip6", PARAM_STR,
-				&af_signaling_ip6}, /* IPv6 of this P-CSCF, to be used in the flow for the AF-signaling */
+		/* IP of this P-CSCF, to be used in the flow for the AF-signaling */
+		{"af_signaling_ip", PARAM_STR, &af_signaling_ip},
+		/* IPv6 of this P-CSCF, to be used in the flow for the AF-signaling */
+		{"af_signaling_ip6", PARAM_STR, &af_signaling_ip6},
+		{"af_signaling_port_pc", PARAM_STR, &af_signaling_port_pc},
+		{"af_signaling_port_ps", PARAM_STR, &af_signaling_port_ps},
 		{"media_type", PARAM_STR, &component_media_type},			/*  */
 		{"flow_protocol", PARAM_STR, &flow_protocol},				/*  */
 		{"omit_flow_ports", INT_PARAM, &omit_flow_ports},			/*  */
@@ -1474,6 +1481,11 @@ static int w_rx_aar_register(
 		recv_ip.len = strlen(buff);
 
 		recv_port = via_port;
+		if(vb->rport != NULL && vb->rport->value.len > 0) {
+			unsigned short port = 0;
+			str2ushort(&vb->rport->value, &port);
+			recv_port = port;
+		}
 		recv_proto = via_proto;
 	}
 	ip_version = check_ip_version(recv_ip);
@@ -1622,9 +1634,10 @@ static int w_rx_aar_register(
 					memcpy(p, recv_ip.s, recv_ip.len);
 					p += recv_ip.len;
 
-					local_data->via_port = via_port;
+					local_data->via_port =
+							via_port; // used as port-us - TODO - better would be contact port
 					local_data->via_proto = via_proto;
-					local_data->recv_port = recv_port;
+					local_data->recv_port = recv_port; // port-uc
 					local_data->recv_proto = recv_proto;
 
 					if(p != (((char *)local_data) + local_data_len)) {

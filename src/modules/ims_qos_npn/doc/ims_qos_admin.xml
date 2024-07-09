@@ -424,6 +424,44 @@ modparam("ims_qos", "af_signaling_ip6", "fd16::205:2dee:ce4a:ab22")
     </section>
 
     <section>
+      <title><varname>af_signaling_port_pc</varname> (String)</title>
+
+      <para>Set P-CSCF Port-PC port for the PCSCF - UE signaling path. Used only for AAR register, Flow-Description AVP (507)</para>
+
+      <para><emphasis> Default value is 5062</emphasis></para>
+
+      <example>
+        <title><varname>af_signaling_port_pc</varname> parameter
+        usage</title>
+
+        <programlisting format="linespecific">
+...
+modparam("ims_qos", "af_signaling_port_pc", "5062")
+...
+        </programlisting>
+      </example>
+    </section>
+
+    <section>
+      <title><varname>af_signaling_port_ps</varname> (String)</title>
+
+      <para>Set P-CSCF Port-PS port for the UE - PCSCF signaling path. Used only for AAR register, Flow-Description AVP (507)</para>
+
+      <para><emphasis> Default value is 5063</emphasis></para>
+
+      <example>
+        <title><varname>af_signaling_port_pc</varname> parameter
+        usage</title>
+
+        <programlisting format="linespecific">
+...
+modparam("ims_qos", "af_signaling_port_ps", "5063")
+...
+        </programlisting>
+      </example>
+    </section>
+
+    <section>
       <title><varname>media_type</varname> (String)</title>
 
       <para>Describe Media Type AVP(520) for AAR register</para>
