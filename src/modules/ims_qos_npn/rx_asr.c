@@ -103,7 +103,7 @@ AAAMessage *rx_process_asr(AAAMessage *request)
 	avp_name.s.s = "abortCause";
 	avp_name.s.len = 10;
 	avp_val.n = (long)code;
-	add_avp(AVP_NAME_STR | AVP_VAL_STR, avp_name, avp_val);
+	add_avp(AVP_NAME_STR, avp_name, avp_val);
 
 	p_session_data = (rx_authsessiondata_t *)session->u.auth.generic_data;
 	if(p_session_data->subscribed_to_signaling_path_status) {
