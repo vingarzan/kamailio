@@ -89,18 +89,18 @@ str IMS_Serv_AVP_val = {"IMS Services", 12};
 str IMS_Em_Serv_AVP_val = {"Emergency IMS Call", 18};
 str IMS_Reg_AVP_val = {"IMS Registration", 16};
 
-static void free_dialog_data(void *data)
-{
-	str *rx_session_id = (str *)data;
-	if(rx_session_id) {
-		if(rx_session_id->s) {
-			shm_free(rx_session_id->s);
-			rx_session_id->s = 0;
-		}
-		shm_free(rx_session_id);
-		rx_session_id = 0;
-	}
-}
+// static void free_dialog_data(void *data)
+// {
+// 	str *rx_session_id = (str *)data;
+// 	if(rx_session_id) {
+// 		if(rx_session_id->s) {
+// 			shm_free(rx_session_id->s);
+// 			rx_session_id->s = 0;
+// 		}
+// 		shm_free(rx_session_id);
+// 		rx_session_id = 0;
+// 	}
+// }
 
 void async_aar_callback(
 		int is_timeout, void *param, AAAMessage *aaa, long elapsed_msecs)

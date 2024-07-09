@@ -226,12 +226,30 @@ static int pv_t_copy_msg(struct sip_msg *src, struct sip_msg *dst)
 
 
 static cmd_export_t cmds[] = {
-		{"Rx_AAR", (cmd_function)cfg_rx_aar, 4, fixup_aar, 0,
-				REQUEST_ROUTE | ONREPLY_ROUTE},
-		{"Rx_AAR_Register", (cmd_function)cfg_rx_aar_register, 2,
-				fixup_aar_register, 0, REQUEST_ROUTE},
-		{"Rx_STR", (cmd_function)cfg_rx_str, 4, fixup_str, 0,
-				REQUEST_ROUTE | ONREPLY_ROUTE},
+		{
+				"Rx_AAR",
+				(cmd_function)cfg_rx_aar,
+				5,
+				fixup_aar,
+				0,
+				REQUEST_ROUTE | ONREPLY_ROUTE,
+		},
+		{
+				"Rx_AAR_Register",
+				(cmd_function)cfg_rx_aar_register,
+				2,
+				fixup_aar_register,
+				0,
+				REQUEST_ROUTE,
+		},
+		{
+				"Rx_STR",
+				(cmd_function)cfg_rx_str,
+				4,
+				fixup_str,
+				0,
+				REQUEST_ROUTE | ONREPLY_ROUTE,
+		},
 		{0, 0, 0, 0, 0, 0},
 };
 
@@ -768,7 +786,7 @@ static int cfg_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 }
 
 static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
-		int id_type, int cfg_type, char *sessionId)
+		int id_type, int cfg_type, char *c_sessionId)
 {
 
 	int ret = CSCF_RETURN_ERROR;
@@ -784,12 +802,15 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 	str ttag = {0, 0};
 
 	str route_name;
-	str ip, uri;
+	str uri = {0};
+	str ip = {0};
+	char ip_c[64] = {0};
 	int identifier_type;
 	int ip_version = 0;
 	sdp_session_cell_t *sdp_session;
 	sdp_stream_cell_t *sdp_stream;
 	str s_id;
+	str s_sessionId;
 	struct hdr_field *h = 0;
 
 	cfg_action_t *cfg_action = 0;
@@ -810,6 +831,11 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 			return result;
 		}
 
+		if(get_str_fparam(&s_sessionId, msg, (fparam_t *)c_sessionId) < 0) {
+			LM_ERR("failed to get s__sessionId\n");
+			return result;
+		}
+
 		// kemi config
 	} else {
 		route_name.s = route;
@@ -817,6 +843,9 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 
 		s_id.s = c_id;
 		s_id.len = strlen(c_id);
+
+		s_sessionId.s = c_sessionId;
+		s_sessionId.len = strlen(c_sessionId);
 	}
 
 	LM_DBG("Looking for route block [%.*s]\n", route_name.len, route_name.s);
@@ -1010,15 +1039,17 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 
 	enum dialog_direction dlg_direction = get_dialog_direction(direction);
 
-	if(sessionId) {
-		rx_session_id.s = sessionId;
-		rx_session_id.len = strlen(sessionId);
+	if(s_sessionId.len > 0) {
+		LM_NOTICE("Session ID passed in from config file [%.*s] direction %s\n",
+				s_sessionId.len, s_sessionId.s, direction);
+		rx_session_id = s_sessionId;
 	}
 	if(rx_session_id.len > 0 && rx_session_id.s) {
 		auth_session = cdpb.AAAGetAuthSession(rx_session_id);
 		if(auth_session && auth_session->u.auth.state != AUTH_ST_OPEN) {
-			LM_DBG("This session is not state open - so we will create a new "
-				   "session");
+			LM_NOTICE(
+					"This session is not state open - so we will create a new "
+					"session");
 			if(auth_session)
 				cdpb.AAASessionsUnlock(auth_session->hash);
 			auth_session = 0;
@@ -1026,7 +1057,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 	}
 
 	if(!auth_session) {
-		LM_DBG("New AAR session for this dialog in mode %s\n", direction);
+		LM_NOTICE("New AAR session for this dialog in mode %s\n", direction);
 
 		//get ip and subscription_id and store them in the call session data
 
@@ -1082,10 +1113,10 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 					uri = cscf_get_public_identity_from_called_party_id(
 							orig_sip_request_msg, &h);
 					if(uri.len == 0) {
-						LM_ERR("No P-Called-Party hdr found in response. Using "
-							   "req URI from dlg - we shouldn't have to do "
-							   "this");
-						//We get hte request uri of origin sip request
+						LM_ERR("No P-Called-Party-ID hdr found in response. "
+							   "Using req URI from dlg - we shouldn't have to "
+							   "do this\n");
+						//We get the request uri of origin sip request
 						if(!cscf_get_to_uri(orig_sip_request_msg, &uri)) {
 							LM_ERR("Error assigning P-Asserted-Identity "
 								   "using To hdr in req");
@@ -1115,8 +1146,8 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		//IP
 		//if its mo we use request SDP
 		//if its mt we use reply SDP
-		if(dlg_direction == DLG_MOBILE_ORIGINATING || is_request) {
-			LM_DBG("originating direction\n");
+		if(dlg_direction == DLG_MOBILE_ORIGINATING) {
+			LM_DBG("originating direction - request\n");
 			//get ip from request sdp (we use first SDP session)
 			if(parse_sdp(orig_sip_request_msg) < 0) {
 				LM_ERR("Unable to parse req SDP\n");
@@ -1156,9 +1187,31 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 				}
 			}
 
+			// freeing the sdp also frees ip, so we need to copy it
+			memcpy(ip_c, ip.s, ip.len);
+			ip_c[ip.len] = 0; // null terminate
+			ip.s = ip_c;
 			free_sdp((sdp_info_t **)(void *)&orig_sip_request_msg->body);
+		} else if(dlg_direction == DLG_MOBILE_TERMINATING && is_request) {
+			LM_DBG("terminating direction - response\n");
+			//get ip from request-uri
 
-		} else {
+			ip = cscf_get_host_from_requri(msg);
+			if(ip.len <= 0) {
+				LM_ERR("Unable to get IP from Request-URI\n");
+				goto error;
+			}
+			// check_ip_version expects a null terminated string
+			memcpy(ip_c, ip.s, ip.len);
+			ip_c[ip.len] = 0; // null terminate
+			ip.s = ip_c;
+			ip_version = check_ip_version(ip);
+
+			LM_DBG("IP retrieved from Request-URI to use for framed IP "
+				   "address: [%.*s]",
+					ip.len, ip.s);
+
+		} else if(dlg_direction == DLG_MOBILE_TERMINATING && !is_request) {
 			LM_DBG("terminating direction and its a response\n");
 			//get ip from reply sdp (we use first SDP session)
 			if(parse_sdp(msg) < 0) {
@@ -1199,6 +1252,11 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 				}
 			}
 
+			// freeing the sdp also frees ip, so we need to copy it
+			memcpy(ip_c, ip.s, ip.len);
+			ip_c[ip.len] = 0; // null terminate
+			ip.s = ip_c;
+
 			free_sdp((sdp_info_t **)(void *)&msg->body);
 		}
 
@@ -1224,15 +1282,15 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		auth_session->u.auth.class = AUTH_CLASS_RXMEDIA;
 
 	} else {
-		LM_DBG("Update AAR session for this dialog in mode %s\n", direction);
-		//check if this is triggered by a 183 - if so break here as it is probably a re-transmit
-		if(!is_request && msg->first_line.u.reply.statuscode == 183) {
-			LM_DBG("Received a 183 for a diameter session that already exists "
-				   "- just going to ignore this\n");
-			cdpb.AAASessionsUnlock(auth_session->hash);
-			result = CSCF_RETURN_TRUE;
-			goto ignore;
-		}
+		LM_INFO("Update AAR session for this dialog in mode %s\n", direction);
+		// //check if this is triggered by a 183 - if so break here as it is probably a re-transmit
+		// if(!is_request && msg->first_line.u.reply.statuscode == 183) {
+		// 	LM_DBG("Received a 183 for a diameter session that already exists "
+		// 		   "- just going to ignore this\n");
+		// 	cdpb.AAASessionsUnlock(auth_session->hash);
+		// 	result = CSCF_RETURN_TRUE;
+		// 	goto ignore;
+		// }
 		saved_t_data->aar_update =
 				1; //this is an update aar - we set this so on async_aar we know this is an update and act accordingly
 	}
@@ -1776,14 +1834,13 @@ static int fixup_aar(void **param, int param_no)
 	int num;
 
 	//param 3 can be empty
-	if(param_no != 3 && strlen((char *)*param) <= 0) {
+	if(param_no != 3 && param_no != 5 && strlen((char *)*param) <= 0) {
 		LM_ERR("empty parameter %d not allowed\n", param_no);
 		return -1;
 	}
 
-	if(param_no == 1
-			|| param_no
-					   == 5) { //route name - static or dynamic string (config vars)   // param 5 is SessionID
+	if(param_no == 1) {
+		// route name - static or dynamic string (config vars)
 		if(fixup_spve_null(param, param_no) < 0)
 			return -1;
 		return 0;
@@ -1801,10 +1858,13 @@ static int fixup_aar(void **param, int param_no)
 		LM_ERR("Bad subscription id: <%s>n", (char *)(*param));
 
 		return E_CFG;
+	} else if(param_no == 5) {
+		// param 5 is SessionID - static or dynamic string (config vars)
+		return fixup_var_str_12(param, param_no);
 	}
-
 	return 0;
 }
+
 static int fixup_str(void **param, int param_no)
 {
 	if(strlen((char *)*param) <= 0) {

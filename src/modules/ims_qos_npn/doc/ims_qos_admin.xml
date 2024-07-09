@@ -733,7 +733,7 @@ route[REG_AAR_REPLY]
 
     <section>
       <title><function moreinfo="none">Rx_AAR(route_block,
-      direction, subscription_id, subscription_id_type)</function></title>
+      direction, subscription_id, subscription_id_type, kemi-cfg, rx_session_id)</function></title>
 
       <para>Perform an AAR on Diameter RX interface to request resource
       authorisation from a Diameter server (typically a PCRF). For more

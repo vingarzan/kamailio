@@ -539,6 +539,25 @@ done:
 	return pu;
 }
 
+str cscf_get_host_from_requri(struct sip_msg *msg)
+{
+	str ip = {0};
+
+	if(msg->first_line.type != SIP_REQUEST) {
+		return ip;
+	}
+	if(parse_sip_msg_uri(msg) < 0) {
+		return ip;
+	}
+
+	if(msg->parsed_uri.type == TEL_URI_T) {
+		return ip;
+	}
+	ip = msg->parsed_uri.host;
+
+	return ip;
+}
+
 /**
  * Finds if the message contains the orig parameter in the first Route header
  * @param msg - the SIP message

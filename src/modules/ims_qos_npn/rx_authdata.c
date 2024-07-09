@@ -142,7 +142,7 @@ int create_new_callsessiondata(str *callid, str *ftag, str *ttag,
 	}
 	memset(call_session_data, 0, len);
 	call_session_data->subscribed_to_signaling_path_status =
-			0; //this is for a media session not regitration
+			0; //this is for a media session not registration
 	call_session_data->must_terminate_dialog =
 			0; //this is used to determine if the dialog must be torn down when the CDP session terminates
 
