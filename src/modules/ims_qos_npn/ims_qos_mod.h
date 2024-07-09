@@ -47,7 +47,7 @@
 #ifndef MOD_H
 #define MOD_H
 
-#define MOD_NAME "ims_qos"
+#define MOD_NAME "ims_qos_npn"
 
 typedef struct ims_qos_params
 {

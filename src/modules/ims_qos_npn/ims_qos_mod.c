@@ -173,13 +173,13 @@ ims_qos_params_t _imsqos_params = {
 		.recv_mode = 0, .dlg_direction = DLG_MOBILE_REGISTER};
 
 /* commands wrappers and fixups */
-static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *id,
-		int id_type, int cfg_type);
+static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
+		int id_type, int cfg_type, char *sessionId);
 static int w_rx_aar_register(
 		struct sip_msg *msg, char *route, char *str1, int cfg_type);
 
-static int cfg_rx_aar(
-		struct sip_msg *msg, char *route, char *dir, char *id, int id_type);
+static int cfg_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
+		int id_type, char *sessionId);
 static int cfg_rx_aar_register(struct sip_msg *msg, char *route, char *str1);
 
 static int cfg_rx_str(struct sip_msg *msg, char *sessionId, char *route);
@@ -771,7 +771,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 
 	AAASession *auth_session = 0;
 	rx_authsessiondata_t *rx_authdata_p = 0;
-	str rx_session_id = 0;
+	str rx_session_id = {0};
 	str callid = {0, 0};
 	str ftag = {0, 0};
 	str ttag = {0, 0};
@@ -1001,9 +1001,11 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		return result;
 	}
 
+	enum dialog_direction dlg_direction = get_dialog_direction(direction);
+
 	if(sessionId) {
 		rx_session_id.s = sessionId;
-		rx_session_id.len = strlen(sessionId.s);
+		rx_session_id.len = strlen(sessionId);
 	}
 	if(rx_session_id.len > 0 && rx_session_id.s) {
 		auth_session = cdpb.AAAGetAuthSession(rx_session_id);
@@ -1930,8 +1932,8 @@ int create_return_code(int result)
 }
 
 
-static int ki_rx_aar(
-		sip_msg_t *msg, str *route, str *dir, str *c_id, int id_type)
+static int ki_rx_aar(sip_msg_t *msg, str *route, str *dir, str *c_id,
+		int id_type, str *sessionId)
 {
 	if(!msg || !route || !dir || !c_id)
 		return -1;
@@ -1951,7 +1953,7 @@ static int ki_rx_aar(
 	dir->s[dir->len] = '\0';
 	c_id->s[c_id->len] = '\0';
 
-	return w_rx_aar(msg, route->s, dir->s, c_id->s, id_type, 1);
+	return w_rx_aar(msg, route->s, dir->s, c_id->s, id_type, 1, sessionId->s);
 }
 
 static int ki_rx_aar_register(sip_msg_t *msg, str *route, str *domain)
@@ -1981,7 +1983,7 @@ static sr_kemi_t sr_kemi_ims_qos_exports[] = {
 	{ str_init("ims_qos"), str_init("Rx_AAR"),
 		SR_KEMIP_INT, ki_rx_aar,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
-			SR_KEMIP_INT, SR_KEMIP_NONE, SR_KEMIP_NONE }
+			SR_KEMIP_INT, SR_KEMIP_STR, SR_KEMIP_NONE }
 	},
 	{ str_init("ims_qos"), str_init("Rx_AAR_Register"),
 		SR_KEMIP_INT, ki_rx_aar_register,
