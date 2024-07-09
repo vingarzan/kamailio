@@ -69,6 +69,7 @@
 #include "ims_qos_mod.h"
 #include "../../core/parser/sdp/sdp.h"
 #include "../../core/kemi.h"
+#include "../../core/fmsg.h"
 
 #include "../../lib/ims/useful_defs.h"
 #include "ims_qos_stats.h"
@@ -770,7 +771,6 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 
 	AAASession *auth_session = 0;
 	rx_authsessiondata_t *rx_authdata_p = 0;
-	str *rx_session_id = 0;
 	str callid = {0, 0};
 	str ftag = {0, 0};
 	str ttag = {0, 0};
@@ -1000,10 +1000,10 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		return result;
 	}
 
+	enum dialog_direction dlg_direction = get_dialog_direction(direction);
 	/** Removing this check, we have to trust that we don't have a session for this dialog
 	//Check that we don't already have an auth session for this specific dialog
 	//if not we create a new one and attach it to the dialog (via session ID).
-	enum dialog_direction dlg_direction = get_dialog_direction(direction);
 	if(dlg_direction == DLG_MOBILE_ORIGINATING) {
 		rx_session_id =
 				dlgb.get_dlg_var(&callid, &ftag, &ttag, &orig_session_key);
@@ -1815,7 +1815,7 @@ static int fixup_str(void **param, int param_no)
 	return 0;
 }
 //This function sends an STR to the sessionID, when the STA arrives the system is going to call a callback.
-static int cfg_rx_str(struct sip_msg *msg, char *sessionId, char *route);
+static int cfg_rx_str(struct sip_msg *msg, char *sessionId, char *route)
 {
 	str rx_session_id;
 	if(!sessionId)
