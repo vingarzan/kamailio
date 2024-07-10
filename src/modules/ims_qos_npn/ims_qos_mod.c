@@ -1280,6 +1280,7 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 			goto error;
 		}
 		auth_session->u.auth.class = AUTH_CLASS_RXMEDIA;
+		auth_session->vendor_id = IMS_vendor_id_3GPP;
 
 	} else {
 		LM_INFO("Update AAR session for this dialog in mode %s\n", direction);
@@ -1653,6 +1654,7 @@ static int w_rx_aar_register(
 							goto error;
 						}
 						auth->u.auth.class = AUTH_CLASS_RXREG;
+						auth->vendor_id = IMS_vendor_id_3GPP;
 					}
 
 					//we are ready to send the AAR async. lets save the local data data
@@ -2102,7 +2104,12 @@ void qos_run_route(sip_msg_t *msg, str *uri, char *route)
 		return;
 	}
 
-	LM_DBG("executing event_route[%s]\n", route);
+	if(uri) {
+		LM_INFO("executing event_route[%s] uri[%.*s]\n", route, uri->len,
+				uri->s);
+	} else {
+		LM_INFO("executing event_route[%s] uri-null\n", route);
+	}
 
 	rt = -1;
 	//event_rt is declared in one of the main kamailio files

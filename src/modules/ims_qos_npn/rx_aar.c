@@ -663,9 +663,10 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 						} else {
 							ipA = req_sdp_session->ip_addr;
 							portA = req_sdp_stream->port;
-
-							ipB = rpl_sdp_session->ip_addr;
-							portB = rpl_sdp_stream->port;
+							if(rpl) {
+								ipB = rpl_sdp_session->ip_addr;
+								portB = rpl_sdp_stream->port;
+							}
 						}
 
 

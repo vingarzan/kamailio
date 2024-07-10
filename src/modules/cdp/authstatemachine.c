@@ -933,6 +933,18 @@ void Send_STR(cdp_session_t *s, AAAMessage *msg)
 		return;
 	}
 
+	if(s->dest_host.len) {
+		/* Add Destination-Host AVP, if not already there */
+		avp = AAAFindMatchingAVP(str, str->avpList.head, AVP_Destination_Host,
+				0, AAA_FORWARD_SEARCH);
+		if(!avp) {
+			// Add Destination-Host AVP
+			avp = AAACreateAVP(AVP_Destination_Host, AAA_AVP_FLAG_MANDATORY, 0,
+					s->dest_host.s, s->dest_host.len, AVP_DUPLICATE_DATA);
+			AAAAddAVPToMessage(str, avp, str->avpList.tail);
+		}
+	}
+
 	//Richard added this - if timers expire dest realm is not here!
 	LM_DBG("Adding dest realm if not there already...\n");
 	LM_DBG("Destination realm: [%.*s] \n", s->dest_realm.len, s->dest_realm.s);

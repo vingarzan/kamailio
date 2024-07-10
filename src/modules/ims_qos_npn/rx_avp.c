@@ -1674,35 +1674,66 @@ int rx_add_required_access_info(AAAMessage *req, uint32_t data)
 int rx_avp_process_3gpp_access_network_charging_identifier(
 		AAAMessage *msg, str *dst)
 {
-	AAA_AVP *avp = 0;
 	AAA_AVP_LIST list = {0};
+	str anci_value = {0};
+	ip_address ancaddr = {0};
+	int32_t ipcan_type = 0;
 	int i = 0;
+
 	if(!msg || !dst)
 		return 0;
-	for(avp = msg->avpList.head; avp; avp = avp->next) {
-		if(avp->code == AVP_IMS_Access_Network_Charging_Identifier)
-			break;
+	if(cdp_avp->epcapp.get_Access_Network_Charging_Identifier(
+			   msg->avpList, &list, 0)) {
+		cdp_avp->epcapp.get_Access_Network_Charging_Identifier_Value(
+				list, &anci_value, 0);
 	}
-	if(avp) {
-		// Ungroup the AVP?
-		// then do the cdp_avp.get_Access_Network_Charging_Identifier_Value();
-		list = cdpb.AAAUngroupAVPS(avp->data);
-		for(avp = list.head; avp; avp = avp->next) {
-			if(avp->code == AVP_IMS_Access_Network_Charging_Identifier_Value) {
-				dst->s = pkg_malloc(
-						2 * (avp->data.len)
-						+ 1 /* because snprintf prints also a 0 after each format*/);
-				if(!dst->s)
-					break;
-				for(i = 0; i < avp->data.len; i++) {
-					snprintf(dst->s + 2 * i, 3, "%02x",
-							((uint8_t *)avp->data.s)[i]);
-				}
-				dst->len = i + 1;
+
+	cdp_avp->epcapp.get_Access_Network_Charging_Address(
+			msg->avpList, &ancaddr, 0);
+
+	cdp_avp->epcapp.get_IP_CAN_Type(msg->avpList, &ipcan_type, 0);
+
+	dst->s = 0;
+	dst->len = 0;
+
+	switch(ipcan_type) {
+		case 0:
+		case 5: // EPS
+			// pdngw=ancaddr;eps-info="eps-item=1;eps-sig=no;ecid=%x-of-anci_value"
+			dst->s = pkg_malloc(7 + 64 + 11 + 9 + 11 + 6 + 2 * anci_value.len
+								+ 32 /* 32 just to be safe */);
+			if(!dst->s) {
+				LOG(L_ERR, "Could not allocate memory for "
+						   "Access-Network-Charging-Identifier\n");
+				return 0;
 			}
-		}
-		cdpb.AAAFreeAVPList(&list);
+			char c_ip[64];
+			switch(ancaddr.ai_family) {
+				case AF_INET:
+					inet_ntop(AF_INET, &ancaddr.ip.v4, c_ip, 64);
+					break;
+				case AF_INET6:
+					inet_ntop(AF_INET6, &ancaddr.ip.v6, c_ip, 64);
+					break;
+				default:
+					c_ip[0] = 0;
+			}
+			if(c_ip[0] != 0) {
+				dst->len += snprintf(dst->s, 7 + 64, "pdngw=%s;", c_ip);
+			}
+			dst->len += snprintf(dst->s + dst->len, 10 + 9 + 11 + 6 + 2,
+					"eps-info=\"eps-item=1;eps-sig=no;ecid=");
+			for(i = 0; i < anci_value.len; i++) {
+				dst->len += snprintf(dst->s + dst->len, 3, "%02x",
+						((uint8_t *)anci_value.s)[i]);
+			}
+			dst->len += snprintf(dst->s + dst->len, 2, "\"");
+			break;
+			// TODO implement also for aother IPCAN types
 	}
+
+	cdp_avp->data.free_Grouped(&list);
+
 	if(dst->s)
 		return 1;
 	else
