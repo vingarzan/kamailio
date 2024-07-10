@@ -187,7 +187,7 @@ static int cfg_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		int id_type, char *sessionId);
 static int cfg_rx_aar_register(struct sip_msg *msg, char *route, char *str1);
 
-static int cfg_rx_str(struct sip_msg *msg, char *sessionId, char *route);
+static int cfg_rx_str(struct sip_msg *msg, char *route, char *sessionId);
 
 struct _pv_req_data
 {
@@ -245,7 +245,7 @@ static cmd_export_t cmds[] = {
 		{
 				"Rx_STR",
 				(cmd_function)cfg_rx_str,
-				4,
+				2,
 				fixup_str,
 				0,
 				REQUEST_ROUTE | ONREPLY_ROUTE,
@@ -1335,7 +1335,7 @@ error:
 		cdpb.AAASessionsUnlock(auth_session->hash);
 		cdpb.AAADropAuthSession(auth_session);
 	}
-ignore:
+	// ignore:
 	if(saved_t_data)
 		free_saved_transaction_global_data(
 				saved_t_data); //only free global data if no AARs were sent. if one was sent we have to rely on the callback (CDP) to free
@@ -1867,35 +1867,46 @@ static int fixup_aar(void **param, int param_no)
 
 static int fixup_str(void **param, int param_no)
 {
-	if(strlen((char *)*param) <= 0) {
+	if(param_no != 2 && strlen((char *)*param) <= 0) {
 		LM_ERR("empty parameter %d not allowed\n", param_no);
 		return -1;
 	}
 
-	if(param_no == 1) { //sessionID - static or dynamic string (config vars)
-		if(fixup_spve_null(param, param_no) < 0)
-			return -1;
-		return 0;
-	} else if(param_no == 2) {
+	if(param_no == 1) {
 		//this may be a route
 		if(fixup_spve_null(param, param_no) < 0)
 			return -1;
 		return 0;
+	} else if(param_no == 2) {
+		//sessionID - static or dynamic string (config vars)
+		return fixup_var_str_12(param, param_no);
 	}
 
 	return 0;
 }
+
 //This function sends an STR to the sessionID, when the STA arrives the system is going to call a callback.
-static int cfg_rx_str(struct sip_msg *msg, char *sessionId, char *route)
+static int cfg_rx_str(struct sip_msg *msg, char *route, char *c_sessionId)
 {
-	str rx_session_id;
-	if(!sessionId)
+	str route_name = {0};
+	str s_session_id = {0};
+	if(!c_sessionId)
 		return 0;
-	rx_session_id.s = sessionId;
-	rx_session_id.len = strlen(sessionId);
+	// standard config
+	if(fixup_get_svalue(msg, (gparam_t *)route, &route_name) != 0) {
+		LM_ERR("no async route block for assign_server_unreg\n");
+		return CSCF_RETURN_ERROR;
+	}
+
+	if(get_str_fparam(&s_session_id, msg, (fparam_t *)c_sessionId) < 0) {
+		LM_ERR("failed to get s__sessionId\n");
+		return CSCF_RETURN_ERROR;
+	}
+
 	//TODO implement that rx_send_str_with_callback where we can call the route on the STA, right now we don't
-	return rx_send_str(&rx_session_id);
+	return rx_send_str(&s_session_id);
 }
+
 //Alberto Diez 08.06.2024  Create a more complex return code
 //If the AAA included a Visited Network Id (it always will), and an Access-Network-Information we pass it to the config file
 int create_complex_return_code(int result, str visited_net_id,
