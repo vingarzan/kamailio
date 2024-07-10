@@ -348,7 +348,8 @@ void cdp_cb_event_process()
 								p_session_data->ttag.s);
 						//There were other parameters like the reason etc.
 						create_avps_for_dialog_event(&p_session_data->callid,
-								&p_session_data->ftag, &p_session_data->ttag);
+								&p_session_data->ftag, &p_session_data->ttag,
+								&p_session_data->direction);
 						qos_run_route(NULL, &p_session_data->identifier,
 								"qos:terminate_dialog");
 					}

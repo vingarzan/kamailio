@@ -81,6 +81,8 @@ typedef struct rx_authsessiondata
 	str callid;
 	str ftag;
 	str ttag;
+	// 1/DLG_MOBILE_ORIGINATING for caller; 2/DLG_MOBILE_TERMINATING for callee; 3/DLG_MOBILE_REGISTER
+	enum dialog_direction direction;
 	str identifier;
 	int identifier_type;
 	str via_host; /* UE host as fetched from Via (first for REQUEST, last for REPLY) */
@@ -108,7 +110,7 @@ int create_new_regsessiondata(str *domain, str *aor, str *ip, int ip_version,
 		rx_authsessiondata_t **session_data);
 int create_new_callsessiondata(str *callid, str *ftag, str *ttag,
 		str *identifier, int identifier_type, str *ip, int ip_version,
-		rx_authsessiondata_t **session_data);
+		enum dialog_direction direction, rx_authsessiondata_t **session_data);
 void free_callsessiondata(rx_authsessiondata_t *session_data);
 
 int add_flow_description(rx_authsessiondata_t *session_data, int stream_num,

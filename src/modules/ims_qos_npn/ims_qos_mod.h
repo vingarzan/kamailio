@@ -49,6 +49,8 @@
 
 #define MOD_NAME "ims_qos_npn"
 
+#include "rx_authdata.h"
+
 typedef struct ims_qos_params
 {
 	int recv_mode;
@@ -76,6 +78,7 @@ int create_complex_return_code(int result, str visited_net_id,
 void qos_run_route(sip_msg_t *msg, str *uri, char *route);
 
 //This function creates AVPs for a dialog event
-void create_avps_for_dialog_event(str *callid, str *ftag, str *ttag);
+void create_avps_for_dialog_event(
+		str *callid, str *ftag, str *ttag, enum dialog_direction *side);
 
 #endif /* MOD_H */

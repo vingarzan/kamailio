@@ -114,7 +114,8 @@ AAAMessage *rx_process_asr(AAAMessage *request)
 		LM_DBG("This is a normal media bearer -  bearer is released by CDP "
 			   "callbacks\n");
 		create_avps_for_dialog_event(&p_session_data->callid,
-				&p_session_data->ftag, &p_session_data->ttag);
+				&p_session_data->ftag, &p_session_data->ttag,
+				&p_session_data->direction);
 		qos_run_route(NULL, &p_session_data->identifier, "qos:asr_call");
 	}
 	cdpb.AAASessionsUnlock(session->hash);

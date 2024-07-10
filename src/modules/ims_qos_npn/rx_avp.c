@@ -412,17 +412,14 @@ inline int rx_add_media_component_description_avp(AAAMessage *msg, int number,
 		media_sub_component[media_sub_component_number] =
 				rx_create_media_subcomponent_avp(number, transport, ipA, portA,
 						ipB, portB, flow_usage_type);
-		if(media_sub_component[media_sub_component_number])
-			cdpb.AAAAddAVPToList(
-					&list, media_sub_component[media_sub_component_number]);
 	} else {
 		media_sub_component[media_sub_component_number] =
 				rx_create_media_subcomponent_avp(number, transport, ipB, portB,
 						ipA, portA, flow_usage_type);
-		if(media_sub_component[media_sub_component_number])
-			cdpb.AAAAddAVPToList(
-					&list, media_sub_component[media_sub_component_number]);
 	}
+	if(media_sub_component[media_sub_component_number])
+		cdpb.AAAAddAVPToList(
+				&list, media_sub_component[media_sub_component_number]);
 
 
 	/*media type*/
@@ -1545,56 +1542,133 @@ int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst)
 			LOG(L_ERR, "Got a 3GPP-User-Location-Info AVP with no content\n");
 			return 0;
 		}
-		length = data.len
-				 - 1; // that's the payload length independent of what it says
+		uint8_t type = data.s[0];
+
+		// that's the payload length independent of what it says - first byte is flags
+		length = data.len - 1;
+		LOG(L_INFO,
+				"Got a 3GPP-User-Location-Info AVP with flags 0x%02x and then "
+				"%d bytes\n",
+				type, length);
 		p = data.s + 1;
-		if((data.s[0] & 0x01) && length >= 7) {
-			// cgi.s = p;
-			// cgi.len = 7;
-			p += 7;
-			length -= 7;
-		}
-		if((data.s[0] & 0x02) && length >= 7) {
-			// sai.s = p;
-			// sai.len = 7;
-			p += 7;
-			length -= 7;
-		}
-		if((data.s[0] & 0x04) && length >= 7) {
-			// rai.s = p;
-			// rai.len = 7;
-			p += 7;
-			length -= 7;
-		}
-		if((data.s[0] & 0x08) && length >= 5) {
-			tai.s = p;
-			tai.len = 5;
-			p += 5;
-			length -= 5;
-		}
-		if((data.s[0] & 0x10) && length >= 7) {
-			ecgi.s = p;
-			ecgi.len = 7;
-			p += 7;
-			length -= 7;
-		}
-		if((data.s[0] & 0x20) && length >= 5) {
-			// lai.s = p;
-			// lai.len = 5;
-			p += 5;
-			length -= 5;
-		}
-		if((data.s[0] & 0x40) && length >= 6) {
-			// enbId.s = p;
-			// enbId.len = 6;
-			p += 6;
-			length -= 6;
-		}
-		if((data.s[0] & 0x80) && length >= 6) {
-			// eenbId.s = p;
-			// eenbId.len = 6;
-			p += 6;
-			length -= 6;
+		switch(type) {
+			case 0:
+				// CGI
+			case 1:
+				// SAI
+			case 2:
+				// RAI
+			case 3 ... 127:
+				// spare for future use
+				break;
+			case 128:
+				// TAI
+				if(length >= 5) {
+					tai.s = p;
+					tai.len = 5;
+					p += 5;
+					length -= 5;
+				}
+				break;
+			case 129:
+				// ECGI
+				if(length >= 7) {
+					ecgi.s = p;
+					ecgi.len = 7;
+					p += 7;
+					length -= 7;
+				}
+				break;
+			case 130:
+				// TAI and ECGI
+				if(length >= 5) {
+					tai.s = p;
+					tai.len = 5;
+					p += 5;
+					length -= 5;
+				}
+				if(length >= 7) {
+					ecgi.s = p;
+					ecgi.len = 7;
+					p += 7;
+					length -= 7;
+				}
+				break;
+			case 131:
+				// eNodeB-ID
+				if(length >= 6) {
+					// enbId.s = p;
+					// enbId.len = 6;
+					p += 6;
+					length -= 6;
+				}
+				break;
+			case 132:
+				// TAI and eNodeB-ID
+				if(length >= 5) {
+					tai.s = p;
+					tai.len = 5;
+					p += 5;
+					length -= 5;
+				}
+				if(length >= 6) {
+					// enbId.s = p;
+					// enbId.len = 6;
+					p += 6;
+					length -= 6;
+				}
+				break;
+			case 133:
+				// extended EnodeB-ID
+				if(length >= 6) {
+					// eenbId.s = p;
+					// eenbId.len = 6;
+					p += 6;
+					length -= 6;
+				}
+				break;
+			case 134:
+				// TAI and extended EnodeB-ID
+				if(length >= 5) {
+					tai.s = p;
+					tai.len = 5;
+					p += 5;
+					length -= 5;
+				}
+				if(length >= 6) {
+					// eenbId.s = p;
+					// eenbId.len = 6;
+					p += 6;
+					length -= 6;
+				}
+				break;
+			case 135:
+				// NCGI
+				if(length >= 9) {
+					// ncgi.s = p;
+					// ncgi.len = 9;
+					p += 9;
+					length -= 9;
+				}
+				break;
+			case 136:
+				// TAI and NCGI
+				if(length >= 5) {
+					tai.s = p;
+					tai.len = 5;
+					p += 5;
+					length -= 5;
+				}
+				if(length >= 9) {
+					// ncgi.s = p;
+					// ncgi.len = 9;
+					p += 9;
+					length -= 9;
+				}
+				break;
+			case 137 ... 255:
+				// spare for future use
+				break;
 		}
 		if(tai.len && ecgi.len) {
 			//It's 4G
@@ -1625,10 +1699,12 @@ int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst)
 				dst->len = snprintf(dst->s, dst->len,
 						"%3u%u%08" PRIx8 "%08" PRIx32 "", mcc, mnc, tac, eci);
 			}
-			if(dst->len > 1)
-				return 1;
 		}
 		//TODO all other scenarios like 2G, 3G, 5G
+		LOG(L_INFO, "P-Access-Network-Info from RAR is [%.*s]\n", dst->len,
+				dst->s);
+		if(dst->len > 1)
+			return 1;
 	}
 	return 0;
 }
@@ -1719,17 +1795,20 @@ int rx_avp_process_3gpp_access_network_charging_identifier(
 					c_ip[0] = 0;
 			}
 			if(c_ip[0] != 0) {
-				dst->len += snprintf(dst->s, 7 + 64, "pdngw=%s;", c_ip);
+				dst->len += snprintf(dst->s, 6 + 64, "pdngw=%s", c_ip);
 			}
-			dst->len += snprintf(dst->s + dst->len, 10 + 9 + 11 + 6 + 2,
-					"eps-info=\"eps-item=1;eps-sig=no;ecid=");
-			for(i = 0; i < anci_value.len; i++) {
-				dst->len += snprintf(dst->s + dst->len, 3, "%02x",
-						((uint8_t *)anci_value.s)[i]);
+			if(anci_value.len > 0) {
+				dst->len += snprintf(dst->s + dst->len, 10 + 9 + 11 + 6 + 2,
+						"%seps-info=\"eps-item=1;eps-sig=no;ecid=",
+						dst->len > 0 ? ";" : "");
+				for(i = 0; i < anci_value.len; i++) {
+					dst->len += snprintf(dst->s + dst->len, 3, "%02x",
+							((uint8_t *)anci_value.s)[i]);
+				}
+				dst->len += snprintf(dst->s + dst->len, 2, "\"");
 			}
-			dst->len += snprintf(dst->s + dst->len, 2, "\"");
 			break;
-			// TODO implement also for aother IPCAN types
+			// TODO implement also for other IPCAN types
 	}
 
 	cdp_avp->data.free_Grouped(&list);

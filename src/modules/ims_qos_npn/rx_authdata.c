@@ -121,6 +121,9 @@ int create_new_regsessiondata(str *domain, str *aor, str *ip, int ip_version,
 		p_session_data = 0;
 		return -1;
 	}
+
+	p_session_data->direction = DLG_MOBILE_REGISTER;
+
 	*session_data = p_session_data;
 
 	return 1;
@@ -128,7 +131,7 @@ int create_new_regsessiondata(str *domain, str *aor, str *ip, int ip_version,
 
 int create_new_callsessiondata(str *callid, str *ftag, str *ttag,
 		str *identifier, int identifier_type, str *ip, int ip_version,
-		rx_authsessiondata_t **session_data)
+		enum dialog_direction direction, rx_authsessiondata_t **session_data)
 {
 
 	int len = callid->len + ftag->len + ttag->len + identifier->len + ip->len
@@ -200,6 +203,8 @@ int create_new_callsessiondata(str *callid, str *ftag, str *ttag,
 		shm_free(call_session_data);
 		return -1;
 	}
+
+	call_session_data->direction = direction;
 
 	*session_data = call_session_data;
 	return 1;

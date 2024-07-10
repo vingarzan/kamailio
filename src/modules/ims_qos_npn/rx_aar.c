@@ -560,7 +560,7 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 	str ftag = {0, 0};
 	int request_originated_from_callee = 0;
 	str ipA, ipB, portA, portB;
-	int intportB, intportA;
+	int intportB = 0, intportA = 0;
 
 	rx_authsessiondata_t *p_session_data = 0;
 	p_session_data = (rx_authsessiondata_t *)auth->u.auth.generic_data;
@@ -583,7 +583,7 @@ int add_media_components(AAAMessage *aar, struct sip_msg *req,
 
 	//Loop through req sessions and streams and get corresponding rpl sessions and streams and populate avps
 	for(;;) {
-		//we only cater for one session at the moment: TDOD: extend
+		//we only cater for one session at the moment: TODO: extend
 		if(sdp_session_num > 0) {
 			break;
 		}

@@ -1261,14 +1261,15 @@ static int w_rx_aar(struct sip_msg *msg, char *route, char *dir, char *c_id,
 		}
 
 		int ret = create_new_callsessiondata(&callid, &ftag, &ttag, &identifier,
-				identifier_type, &ip, ip_version, &rx_authdata_p);
+				identifier_type, &ip, ip_version, dlg_direction,
+				&rx_authdata_p);
 		if(!ret) {
 			LM_ERR("Unable to create new media session data parcel\n");
 			goto error;
 		}
 
 		//create new diameter auth session
-		auth_session = cdpb.AAACreateClientAuthSession(1,
+		auth_session = cdpb.AAACreateClientAuthSession(1 /*is_statefull*/,
 				callback_for_cdp_session, rx_authdata_p); //returns with a lock
 		if(!auth_session) {
 			LM_ERR("Rx: unable to create new Rx Media Session\n");
@@ -1965,7 +1966,8 @@ int create_complex_return_code(int result, str visited_net_id,
 /**
  *  Creates the AVPs for Call-ID, FTag and ToTag to promote a Dialog event to the config file
  */
-void create_avps_for_dialog_event(str *callid, str *ftag, str *ttag)
+void create_avps_for_dialog_event(
+		str *callid, str *ftag, str *ttag, enum dialog_direction *side)
 {
 	int_str avp_val, avp_name;
 	avp_name.s.s = "aar_return_code";
@@ -1989,6 +1991,27 @@ void create_avps_for_dialog_event(str *callid, str *ftag, str *ttag)
 		avp_name.s.s = "toTag";
 		avp_name.s.len = 5;
 		avp_val.s = *ttag;
+		add_avp(AVP_NAME_STR | AVP_VAL_STR, avp_name, avp_val);
+	}
+
+	if(side) {
+		avp_name.s.s = "call-end";
+		avp_name.s.len = 8;
+		switch(*side) {
+			case DLG_MOBILE_ORIGINATING:
+				avp_val.s.s = "caller";
+				break;
+			case DLG_MOBILE_TERMINATING:
+				avp_val.s.s = "callee";
+				break;
+			case DLG_MOBILE_REGISTER:
+				avp_val.s.s = "register";
+				break;
+			default:
+				avp_val.s.s = "unknown";
+				break;
+		}
+		avp_val.s.len = strlen(avp_val.s.s);
 		add_avp(AVP_NAME_STR | AVP_VAL_STR, avp_name, avp_val);
 	}
 }
