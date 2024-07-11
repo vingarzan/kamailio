@@ -110,14 +110,13 @@ AAAMessage *rx_process_rar(AAAMessage *request)
 					identifier = p_session_data->registration_aor;
 				} else {
 					identifier = p_session_data->identifier;
-					create_avps_for_dialog_event(&p_session_data->callid,
-							&p_session_data->ftag, &p_session_data->ttag,
-							&p_session_data->direction);
 				}
+				create_avps_for_dialog_event(&p_session_data->callid,
+						&p_session_data->ftag, &p_session_data->ttag,
+						&p_session_data->direction);
 				create_complex_return_code(2001, visited_net, pani_content,
 						access_network_charging_info, request->sessionId->data);
-				qos_run_route(
-						NULL, &identifier, "qos:rar_access_network");
+				qos_run_route(NULL, &identifier, "qos:rar_access_network");
 				break;
 			default:
 				break;

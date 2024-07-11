@@ -1497,7 +1497,7 @@ int rx_avp_process_3gpp_sgsn_mcc_mnc(AAAMessage *aaa, str *dst)
 BOTH are full hex
  */
 
-int rx_avp_extract_mcc_mnc(str src, int *mcc, int *mnc)
+int rx_avp_extract_mcc_mnc(str src, int *mcc, int *mnc, int *mnc_digits)
 {
 	if(src.len < 3 || !src.s || !mcc || !mnc)
 		return 0;
@@ -1506,207 +1506,529 @@ int rx_avp_extract_mcc_mnc(str src, int *mcc, int *mnc)
 	if(((src.s[1] & 0xF0) >> 4) == 0x0F) {
 		//ignore MNC digit 3 means its 0 at the front
 		*mnc = (src.s[2] & 0x0F) * 10 + ((src.s[2] & 0xF0) >> 4);
+		if(mnc_digits)
+			*mnc_digits = 2;
 	} else {
 		*mnc = (src.s[2] & 0x0F) * 100 + ((src.s[2] & 0xF0) >> 4) * 10
 			   + ((src.s[1] & 0xF0) >> 4);
+		if(mnc_digits)
+			*mnc_digits = 3;
 	}
 	return 1;
 }
+
+
+char unknown[20];
+
+char *rx_avp_get_access_class(int32_t ip_can_type, int32_t rat_type)
+{
+	// 3GPP TS 29.212
+	switch(rat_type) {
+		case 0:
+			return "3GPP-WLAN";
+		case 1:
+			return "VIRTUAL";
+		case 2:
+			return "TRUSTED-N3GA";
+		case 3:
+			return "WIRELINE";
+		case 4:
+			return "WIRELINE-CABLE";
+		case 5:
+			return "WIRELINE-BBF";
+		case 1000:
+			return "3GPP-UTRAN";
+		case 1001:
+			return "3GPP-GERAN";
+		case 1002:
+			return "3GPP-GAN";
+		case 1003:
+			return "3GPP-HSPA";
+		case 1004:
+			return "3GPP-E-UTRAN";
+		case 1005:
+			return "3GPP-E-UTRAN-NB-IoT";
+		case 1006:
+			return "3GPP-NR";
+		case 1007:
+			return "3GPP-E-UTRAN-LTE-M";
+		case 1008:
+			return "3GPP-NR-U";
+		case 1011:
+			return "3GPP-E-UTRAN-LEO";
+		case 1012:
+			return "3GPP-E-UTRAN-MEO";
+		case 1013:
+			return "3GPP-E-UTRAN-GEO";
+		case 1014:
+			return "3GPP-E-UTRAN-OTHERSAT";
+		case 1021:
+			return "3GPP-E-UTRAN-NB-IoT-LEO";
+		case 1022:
+			return "3GPP-E-UTRAN-NB-IoT-MEO";
+		case 1023:
+			return "3GPP-E-UTRAN-NB-IoT-GEO";
+		case 1024:
+			return "3GPP-E-UTRAN-NB-IoT-OTHERSAT";
+		case 1031:
+			return "3GPP-E-UTRAN-LTE-M-LEO";
+		case 1032:
+			return "3GPP-E-UTRAN-LTE-M-MEO";
+		case 1033:
+			return "3GPP-E-UTRAN-LTE-M-GEO";
+		case 1034:
+			return "3GPP-E-UTRAN-LTE-M-OTHERSAT";
+		case 1035:
+			return "3GPP-NR-LEO";
+		case 1036:
+			return "3GPP-NR-MEO";
+		case 1037:
+			return "3GPP-NR-GEO";
+		case 1038:
+			return "3GPP-NR-OTHERSAT";
+		case 1039:
+			return "3GPP-NR-REDCAP";
+		case 2000:
+			return "3GPP2-1X";
+		case 2001:
+			return "3GPP2-1X-HRPD";
+		case 2002:
+			return "3GPP2-UMB";
+		case 2003:
+			return "3GPP2-EHRPD";
+	}
+
+	switch(ip_can_type) {
+		case -1:
+		default:
+			snprintf(unknown, 20, "UNKNOWN-%d/%d", ip_can_type, rat_type);
+			return unknown;
+		case 1:
+			return "DOCSIS";
+		case 2:
+			return "xDSL";
+		case 3:
+			return "WiMAX";
+		case 4:
+			return "3GPP2";
+		case 5:
+			return "3GPP-EPS";
+		case 6:
+			return "Non-3GPP-EPS";
+		case 7:
+			return "FBA";
+		case 8:
+			return "3GPP-5GS";
+		case 9:
+			return "Non-3GPP-5GS";
+	}
+}
+
+#define MAX_PANI_LEN 128
 
 /**
  * This function allocates memory for dst in pkg memory, needs to be freed by the caller
  */
 int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst)
 {
-	str data = {0, 0};
+	int32_t ip_can_type = -1;
+	char *c_access_class = 0;
+	int32_t rat_type = -1;
+
+	str data = {0};
 	char *p = 0;
-	// str cgi = {0};
-	// str sai = {0};
-	// str rai = {0};
+	uint16_t length = 0;
+	str cgi = {0};
+	str sai = {0};
+	str rai = {0};
 	str tai = {0};
 	str ecgi = {0};
-	// str lai = {0};
-	// str enbId = {0};
-	// str eenbId = {0};
-	int mnc, mcc = 0;
+	str enodebid = {0};
+	str eenodebid = {0};
+	str ncgi = {0};
+
+	int mnc = 0, mcc = 0, mnc_digits = 0;
+	int mnc2 = 0, mcc2 = 0, mnc_digits2 = 0;
 	uint16_t tac = 0;
-	uint16_t length = 0;
 	uint32_t eci = 0;
+	uint32_t macro_enodebid = 0;
+	int is_long = 0; // whether the macro_enodebid needs 5 or 6 hex digits
+	uint64_t nrci = 0;
 
 	if(!rar || !dst)
 		return 0;
-	if(!cdp_avp->epcapp.get_3GPP_User_Location_Info(rar->avpList, &data, 0)) {
+
+
+	dst->s = pkg_malloc(MAX_PANI_LEN);
+	if(!dst->s) {
+		LOG(L_ERR, "Could not allocate memory for P-Visited-Network-Id\n");
 		return 0;
-	} else {
-		if(!data.len) {
-			LOG(L_ERR, "Got a 3GPP-User-Location-Info AVP with no content\n");
+	}
+
+	// close to, but not really the access-class or access-type
+	cdp_avp->epcapp.get_IP_CAN_Type(rar->avpList, &ip_can_type, 0);
+	cdp_avp->epcapp.get_RAT_Type(rar->avpList, &ip_can_type, 0);
+	c_access_class = rx_avp_get_access_class(ip_can_type, rat_type);
+
+	if(!cdp_avp->epcapp.get_3GPP_User_Location_Info(rar->avpList, &data, 0)) {
+		memcpy(dst->s, c_access_class, strlen(c_access_class));
+		dst->len = strlen(c_access_class);
+		return 1;
+	}
+	if(!data.len) {
+		LOG(L_ERR, "Got a 3GPP-User-Location-Info AVP with no content\n");
+		return 0;
+	}
+	uint8_t type = data.s[0];
+
+	// that's the payload length independent of what it says - first byte is flags
+	length = data.len - 1;
+	LOG(L_INFO, "Got a 3GPP-User-Location-Info AVP type %d and %d bytes\n",
+			type, length);
+	p = data.s + 1;
+	switch(type) {
+		case 0:
+			// CGI
+			if(length >= 7) {
+				cgi.s = p;
+				cgi.len = 7;
+				p += 7;
+				length -= 7;
+			}
+		case 1:
+			// SAI
+			if(length >= 7) {
+				sai.s = p;
+				sai.len = 7;
+				p += 7;
+				length -= 7;
+			}
+		case 2:
+			// RAI
+			if(length >= 7) {
+				rai.s = p;
+				rai.len = 7;
+				p += 7;
+				length -= 7;
+			}
+		case 3 ... 127:
+			// spare for future use
+			break;
+		case 128:
+			// TAI
+			if(length >= 5) {
+				tai.s = p;
+				tai.len = 5;
+				p += 5;
+				length -= 5;
+			}
+			break;
+		case 129:
+			// ECGI
+			if(length >= 7) {
+				ecgi.s = p;
+				ecgi.len = 7;
+				p += 7;
+				length -= 7;
+			}
+			break;
+		case 130:
+			// TAI and ECGI
+			if(length >= 5) {
+				tai.s = p;
+				tai.len = 5;
+				p += 5;
+				length -= 5;
+			}
+			if(length >= 7) {
+				ecgi.s = p;
+				ecgi.len = 7;
+				p += 7;
+				length -= 7;
+			}
+			break;
+		case 131:
+			// eNodeB-ID
+			if(length >= 6) {
+				enodebid.s = p;
+				enodebid.len = 6;
+				p += 6;
+				length -= 6;
+			}
+			break;
+		case 132:
+			// TAI and eNodeB-ID
+			if(length >= 5) {
+				tai.s = p;
+				tai.len = 5;
+				p += 5;
+				length -= 5;
+			}
+			if(length >= 6) {
+				enodebid.s = p;
+				enodebid.len = 6;
+				p += 6;
+				length -= 6;
+			}
+			break;
+		case 133:
+			// extended EnodeB-ID
+			if(length >= 6) {
+				eenodebid.s = p;
+				eenodebid.len = 6;
+				p += 6;
+				length -= 6;
+			}
+			break;
+		case 134:
+			// TAI and extended EnodeB-ID
+			if(length >= 5) {
+				tai.s = p;
+				tai.len = 5;
+				p += 5;
+				length -= 5;
+			}
+			if(length >= 6) {
+				eenodebid.s = p;
+				eenodebid.len = 6;
+				p += 6;
+				length -= 6;
+			}
+			break;
+		case 135:
+			// NCGI
+			if(length >= 9) {
+				ncgi.s = p;
+				ncgi.len = 9;
+				p += 9;
+				length -= 9;
+			}
+			break;
+		case 136:
+			// TAI and NCGI
+			if(length >= 6) {
+				tai.s = p;
+				tai.len = 3 + 3; // TAC is 3 bytes in NR
+				p += 6;
+				length -= 6;
+			}
+			if(length >= 9) {
+				ncgi.s = p;
+				ncgi.len = 9;
+				p += 9;
+				length -= 9;
+			}
+			break;
+		case 137 ... 255:
+			// spare for future use
+			break;
+	}
+	if(cgi.len) {
+		if(!rx_avp_extract_mcc_mnc(tai, &mcc, &mnc, &mnc_digits)) {
+			uint32_t data = tai.s[0] << 16 | tai.s[1] << 8 | tai.s[2];
+			LOG(L_ERR, "Could not extract PLMN-ID from CGI 0x%06x\n", data);
 			return 0;
 		}
-		uint8_t type = data.s[0];
-
-		// that's the payload length independent of what it says - first byte is flags
-		length = data.len - 1;
-		LOG(L_INFO,
-				"Got a 3GPP-User-Location-Info AVP with flags 0x%02x and then "
-				"%d bytes\n",
-				type, length);
-		p = data.s + 1;
-		switch(type) {
-			case 0:
-				// CGI
-			case 1:
-				// SAI
-			case 2:
-				// RAI
-			case 3 ... 127:
-				// spare for future use
-				break;
-			case 128:
-				// TAI
-				if(length >= 5) {
-					tai.s = p;
-					tai.len = 5;
-					p += 5;
-					length -= 5;
-				}
-				break;
-			case 129:
-				// ECGI
-				if(length >= 7) {
-					ecgi.s = p;
-					ecgi.len = 7;
-					p += 7;
-					length -= 7;
-				}
-				break;
-			case 130:
-				// TAI and ECGI
-				if(length >= 5) {
-					tai.s = p;
-					tai.len = 5;
-					p += 5;
-					length -= 5;
-				}
-				if(length >= 7) {
-					ecgi.s = p;
-					ecgi.len = 7;
-					p += 7;
-					length -= 7;
-				}
-				break;
-			case 131:
-				// eNodeB-ID
-				if(length >= 6) {
-					// enbId.s = p;
-					// enbId.len = 6;
-					p += 6;
-					length -= 6;
-				}
-				break;
-			case 132:
-				// TAI and eNodeB-ID
-				if(length >= 5) {
-					tai.s = p;
-					tai.len = 5;
-					p += 5;
-					length -= 5;
-				}
-				if(length >= 6) {
-					// enbId.s = p;
-					// enbId.len = 6;
-					p += 6;
-					length -= 6;
-				}
-				break;
-			case 133:
-				// extended EnodeB-ID
-				if(length >= 6) {
-					// eenbId.s = p;
-					// eenbId.len = 6;
-					p += 6;
-					length -= 6;
-				}
-				break;
-			case 134:
-				// TAI and extended EnodeB-ID
-				if(length >= 5) {
-					tai.s = p;
-					tai.len = 5;
-					p += 5;
-					length -= 5;
-				}
-				if(length >= 6) {
-					// eenbId.s = p;
-					// eenbId.len = 6;
-					p += 6;
-					length -= 6;
-				}
-				break;
-			case 135:
-				// NCGI
-				if(length >= 9) {
-					// ncgi.s = p;
-					// ncgi.len = 9;
-					p += 9;
-					length -= 9;
-				}
-				break;
-			case 136:
-				// TAI and NCGI
-				if(length >= 5) {
-					tai.s = p;
-					tai.len = 5;
-					p += 5;
-					length -= 5;
-				}
-				if(length >= 9) {
-					// ncgi.s = p;
-					// ncgi.len = 9;
-					p += 9;
-					length -= 9;
-				}
-				break;
-			case 137 ... 255:
-				// spare for future use
-				break;
-		}
-		if(tai.len && ecgi.len) {
-			//It's 4G
-			//extract MCC and MNC from first 3 bytes from TAI
-			//extract TAC from last two bytes from TAI that makes 4 hex chars
-			// extract 7 hex chars from ECGI
-			if(!rx_avp_extract_mcc_mnc(tai, &mcc, &mnc)) {
-				LOG(L_ERR, "Could not extract PLMN-ID from TAI [%.*s]\n",
-						tai.len, tai.s);
-				return 0;
-			}
-			tac = (uint16_t)(tai.s[4]);
-			tac |= (tai.s[3] << 8);
-			eci = ((ecgi.s[0] & 0x0F) << 24) + (ecgi.s[1] << 16)
-				  + (ecgi.s[2] << 8) + ecgi.s[3];
-			dst->len = 32 * sizeof(char);
-			dst->s = pkg_malloc(dst->len);
-			if(!dst->s) {
-				LOG(L_ERR,
-						"Could not allocate memory for P-Visited-Network-Id\n");
-				return 0;
-			}
-			//we produce a 16-19 chars depending if MNC is 3 chars or only 2 and if TAC is 16 or 8 bits only
-			if(tac & 0xFF00) {
-				dst->len = snprintf(dst->s, dst->len,
-						"%3u%u%08" PRIx16 "%08" PRIx32 "", mcc, mnc, tac, eci);
-			} else {
-				dst->len = snprintf(dst->s, dst->len,
-						"%3u%u%08" PRIx8 "%08" PRIx32 "", mcc, mnc, tac, eci);
-			}
-		}
-		//TODO all other scenarios like 2G, 3G, 5G
-		LOG(L_INFO, "P-Access-Network-Info from RAR is [%.*s]\n", dst->len,
-				dst->s);
-		if(dst->len > 1)
-			return 1;
+		uint16_t lac = ntohs(*(uint16_t *)(cgi.s + 3));
+		uint16_t ci = ntohs(*(uint16_t *)(cgi.s + 5));
+		if(mnc_digits == 2)
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-GERAN;cgi-3gpp=%03u%02u%04x%04x", mcc, mnc, lac, ci);
+		else
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-GERAN;cgi-3gpp=%03u%03u%04x%04x", mcc, mnc, lac, ci);
 	}
-	return 0;
+	if(sai.len) {
+		if(!rx_avp_extract_mcc_mnc(tai, &mcc, &mnc, &mnc_digits)) {
+			uint32_t data = sai.s[0] << 16 | sai.s[1] << 8 | sai.s[2];
+			LOG(L_ERR, "Could not extract PLMN-ID from SAI 0x%06x\n", data);
+			return 0;
+		}
+		uint16_t lac = ntohs(*(uint16_t *)(sai.s + 3));
+		uint16_t sac = ntohs(*(uint16_t *)(sai.s + 5));
+		if(mnc_digits == 2)
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-UTRAN;utran-sai-3gpp=%03u%02u%04x%04x", mcc, mnc, lac,
+					sac);
+		else
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-UTRAN;utran-sai-3gpp=%03u%03u%04x%04x", mcc, mnc, lac,
+					sac);
+	}
+	if(rai.len) {
+		if(!rx_avp_extract_mcc_mnc(tai, &mcc, &mnc, &mnc_digits)) {
+			uint32_t data = rai.s[0] << 16 | rai.s[1] << 8 | rai.s[2];
+			LOG(L_ERR, "Could not extract PLMN-ID from RAI 0x%06x\n", data);
+			return 0;
+		}
+		uint16_t lac = ntohs(*(uint16_t *)(rai.s + 3));
+		uint16_t rac = ntohs(*(uint16_t *)(rai.s + 5));
+		if(mnc_digits == 2)
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-UTRAN;utran-cell-id-3gpp=%03u%02u%04x%04x", mcc, mnc,
+					lac, rac);
+		else
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-UTRAN;utran-cell-id-3gpp=%03u%03u%04x%04x", mcc, mnc,
+					lac, rac);
+	}
+	if(tai.len) {
+		if(!rx_avp_extract_mcc_mnc(tai, &mcc, &mnc, &mnc_digits)) {
+			LOG(L_ERR, "Could not extract PLMN-ID from TAI [%.*s]\n", tai.len,
+					tai.s);
+			return 0;
+		}
+		if(tai.len == 5) {
+			tac = ntohs(*(uint16_t *)(tai.s + 3));
+		} else if(tai.len == 6) {
+			tac = (((uint8_t)tai.s[3]) << 16) + (((uint8_t)tai.s[4]) << 8)
+				  + (((uint8_t)tai.s[5]));
+		}
+	}
+	if(ecgi.len) {
+		if(!rx_avp_extract_mcc_mnc(ecgi, &mcc2, &mnc2, &mnc_digits2)) {
+			uint32_t data = ecgi.s[0] << 16 | ecgi.s[1] << 8 | ecgi.s[2];
+			LOG(L_ERR, "Could not extract PLMN-ID from ECGI 0x%06x\n", data);
+			return 0;
+		}
+		eci = ((ecgi.s[3] & 0x0F) << 24) + (ecgi.s[4] << 16) + (ecgi.s[5] << 8)
+			  + ecgi.s[6];
+		if(mnc_digits2 == 2)
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-E-UTRAN;utran-cell-id-3gpp=%03u%02u", mcc2, mnc2);
+		else
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-E-UTRAN;utran-cell-id-3gpp=%03u%03u", mcc2, mnc2);
+		switch(tai.len) {
+			case 5:
+				dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+						"%04x", tac);
+				break;
+			case 6:
+				dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+						"%06x", tac);
+		}
+		dst->len += snprintf(
+				dst->s + dst->len, MAX_PANI_LEN - dst->len, "%05x", eci);
+	}
+	if(enodebid.len) {
+		if(!rx_avp_extract_mcc_mnc(tai, &mcc2, &mnc2, &mnc_digits2)) {
+			uint32_t data =
+					enodebid.s[0] << 16 | enodebid.s[1] << 8 | enodebid.s[2];
+			LOG(L_ERR, "Could not extract PLMN-ID from eNodeBId 0x%06x\n",
+					data);
+			return 0;
+		}
+		macro_enodebid = ((((uint8_t)enodebid.s[3]) & 0x0F) << 16)
+						 + (((uint8_t)enodebid.s[4]) << 8)
+						 + (((uint8_t)enodebid.s[5]));
+	}
+	if(eenodebid.len) {
+		if(!rx_avp_extract_mcc_mnc(tai, &mcc2, &mnc2, &mnc_digits2)) {
+			uint32_t data =
+					eenodebid.s[0] << 16 | eenodebid.s[1] << 8 | eenodebid.s[2];
+			LOG(L_ERR,
+					"Could not extract PLMN-ID from Extended-eNodeBId "
+					"0x%06x\n",
+					data);
+			return 0;
+		}
+		if(((*(uint8_t *)(eenodebid.s + 3)) & 0x80) == 0) {
+			// Long Macro eNodeB Id
+			is_long = 1;
+			macro_enodebid = ((((uint8_t)eenodebid.s[3]) & 0x1F) << 16)
+							 + (((uint8_t)eenodebid.s[4]) << 8)
+							 + (((uint8_t)eenodebid.s[5]));
+		} else {
+			// Short Macro eNodeB Id
+			macro_enodebid = ((((uint8_t)eenodebid.s[3]) & 0x03) << 16)
+							 + (((uint8_t)eenodebid.s[4]) << 8)
+							 + (((uint8_t)eenodebid.s[5]));
+		}
+	}
+	if(enodebid.len || eenodebid.len) {
+		if(mnc_digits2 == 2)
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-E-UTRAN;utran-cell-id-3gpp=%03u%02u", mcc2, mnc2);
+		else
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-E-UTRAN;utran-cell-id-3gpp=%03u%03u", mcc2, mnc2);
+		switch(tai.len) {
+			case 5:
+				dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+						"%04x", tac);
+				break;
+			case 6:
+				dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+						"%06x", tac);
+		}
+		if(is_long)
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"%06x", macro_enodebid);
+		else
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"%05x", macro_enodebid);
+	}
+	if(ncgi.len) {
+		if(!rx_avp_extract_mcc_mnc(tai, &mcc2, &mnc2, &mnc_digits2)) {
+			uint32_t data = ncgi.s[0] << 16 | ncgi.s[1] << 8 | ncgi.s[2];
+			LOG(L_ERR, "Could not extract PLMN-ID from NCGI 0x%06x\n", data);
+			return 0;
+		}
+		nrci = ((uint64_t)ncgi.s[3] << 40) + ((uint64_t)ncgi.s[4] << 32)
+			   + ((uint64_t)ncgi.s[5] << 24) + ((uint64_t)ncgi.s[6] << 16)
+			   + ((uint64_t)ncgi.s[7] << 8) + ncgi.s[8];
+		if(mnc_digits2 == 2)
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-NR;utran-cell-id-3gpp=%03u%02u", mcc2, mnc2);
+		else
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-NR;utran-cell-id-3gpp=%03u%03u", mcc2, mnc2);
+		switch(tai.len) {
+			case 5:
+				dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+						"%04x", tac);
+				break;
+			case 6:
+				dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+						"%06x", tac);
+		}
+		dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+				"%012" PRIx64, nrci);
+	}
+
+	if(tai.len && !ecgi.len && !enodebid.len && !eenodebid.len && !ncgi.len) {
+		if(mnc_digits == 2)
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-E-UTRAN;tai-3gpp=%03u%02u", mcc, mnc);
+		else
+			dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+					"3GPP-E-UTRAN;tai-3gpp=%03u%03u", mcc, mnc);
+		switch(tai.len) {
+			case 5:
+				dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+						"%04x", tac);
+				break;
+			case 6:
+				dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+						"%06x", tac);
+		}
+	}
+
+	if(!dst->len) {
+		memcpy(dst->s, c_access_class, strlen(c_access_class));
+		dst->len = strlen(c_access_class);
+	}
+	if(dst->len) {
+		dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+				";network-provided");
+	}
+
+	LOG(L_INFO, "P-Access-Network-Info from RAR is [%.*s]\n", dst->len, dst->s);
+	if(!dst->len) {
+		str_free(*dst, pkg);
+	}
+	return (dst->len > 1);
 }
 
 /** 
