@@ -1139,7 +1139,7 @@ static int ki_handle_ruri_alias_mode(struct sip_msg *msg, int mode)
 	char buf[MAX_URI_SIZE], *val, *sep, *at, *next, *cur_uri, *rest, *port,
 			*trans, *start;
 	unsigned int len, rest_len, val_len, alias_len, proto_type, cur_uri_len,
-			ip_port_len;
+			ip_len, ip_port_len;
 
 	if(parse_sip_msg_uri(msg) < 0) {
 		LM_ERR("while parsing Request-URI\n");
@@ -1185,6 +1185,16 @@ static int ki_handle_ruri_alias_mode(struct sip_msg *msg, int mode)
 		LM_ERR("no '~' in alias param value\n");
 		return -1;
 	}
+	// IPv6 needs some [] added - so being clever in this code wasn't really
+	// helpful, we have to complicate it even more.
+	ip_len = port - val;
+	int is_ipv6 = 0;
+	for(int i = 0; i < ip_len; i++) {
+		if(val[i] == ':') {
+			is_ipv6 = 1;
+			break;
+		}
+	}
 	*(port++) = ':';
 	trans = memchr(port, 126 /* ~ */, val_len - (port - val));
 	if(trans == NULL) {
@@ -1195,8 +1205,17 @@ static int ki_handle_ruri_alias_mode(struct sip_msg *msg, int mode)
 	append_str(at, "sip:", 4);
 	ip_port_len = trans - val;
 	alias_len = _ksr_contact_salias.len + ip_port_len + 2 /* ~n */;
-	memcpy(at, val, ip_port_len);
-	at = at + ip_port_len;
+	if(is_ipv6) {
+		append_chr(at, '[');
+		memcpy(at, val, ip_len);
+		at = at + ip_len;
+		append_chr(at, ']');
+		append_chr(at, ':');
+		memcpy(at, port, trans - port);
+	} else {
+		memcpy(at, val, ip_port_len);
+		at = at + ip_port_len;
+	}
 	trans = trans + 1;
 	if((ip_port_len + 2 > val_len) || (*trans == ';') || (*trans == '?')) {
 		LM_ERR("no proto in alias param\n");

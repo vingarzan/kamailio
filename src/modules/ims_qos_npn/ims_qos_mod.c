@@ -1535,8 +1535,16 @@ static int w_rx_aar_register(
 		recv_proto = msg->rcv.proto;
 	} else {
 		memset(&recv_ip, 0, sizeof(str));
-		memcpy(&buff, vb->host.s, vb->host.len);
-		buff[vb->host.len] = 0;
+		if(vb->host.len > 2 && vb->host.s[0] == '['
+				&& vb->host.s[vb->host.len - 1] == ']') {
+			// IPv6
+			memcpy(&buff, vb->host.s + 1, vb->host.len - 2);
+			buff[vb->host.len - 2] = 0;
+		} else {
+			// IPv4
+			memcpy(&buff, vb->host.s, vb->host.len);
+			buff[vb->host.len] = 0;
+		}
 		recv_ip.s = buff;
 		recv_ip.len = strlen(buff);
 
