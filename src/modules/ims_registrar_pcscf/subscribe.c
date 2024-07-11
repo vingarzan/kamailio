@@ -107,7 +107,8 @@ int reginfo_subscribe_real(struct sip_msg *msg, pv_elem_t *uri,
 	uri_str.s = uri_buf;
 	uri_str.len = uri_buf_len;
 
-	LM_DBG("extra_headers: [%.*s]", extra_headers.len, extra_headers.s);
+	LM_DBG("p_asserted_identity_header: [%.*s]", extra_headers.len,
+			extra_headers.s);
 
 	LM_DBG("Subscribing to %.*s\n", uri_str.len, uri_str.s);
 

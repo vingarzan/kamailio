@@ -206,6 +206,8 @@ str cscf_get_public_identity_from_requri(struct sip_msg *msg);
  */
 str cscf_get_contact_from_requri(struct sip_msg *msg);
 
+str cscf_get_host_from_requri(struct sip_msg *msg);
+
 /**
  * Looks for the Call-ID header
  * @param msg - the sip message
