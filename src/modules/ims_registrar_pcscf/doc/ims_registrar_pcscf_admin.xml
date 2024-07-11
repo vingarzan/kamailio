@@ -220,9 +220,11 @@ modparam("ims_registrar_pcscf", "ignore_contact_rxport_check", 1)
 
         Note: with IMS, the UE opens IPsec Security Associations between IPs
         and ports with the P-CSCF. These are for both UDP and TCP, with a
-        single negotiation, which does not need to specify the protocol. Hence
-        why is this checked at all? Before it could be ignored if the parameter
-        ignore_contact_rxport_check was set (bug/typo maybe?).
+        single negotiation, which does not need to specify the protocol. 
+      </para>
+      <para> 
+        (Before the introduction of this parameter, the similar one for port was
+        used to also ignore the protocol. But that might've been a type/mistake.)
       </para>
 
       <para>This Parameter is primarily used by the "is_registered" function.</para>
@@ -326,7 +328,7 @@ modparam("ims_registrar_pcscf", "delete_delay", 10)
       <para>
         Normally, the UE identification should be done on IPsec SPIs and source IP/port of the packets. 
         In some cases the ims_* modules trust the top Via on requests and the bottom Via on responses. In some (better)
-        cases this trusts the received-from IP (or the alias in the Contact header).
+        cases this module trusts the received-from IP (or the alias in the Contact header).
       </para>
       <para>
         This parameter allows for an external-to-Kamailio IPsec functionality to be used. That will be in charge of
@@ -341,9 +343,12 @@ modparam("ims_registrar_pcscf", "delete_delay", 10)
       <para>
         <emphasis>Note:</emphasis> !! trusting the Via header has security drawbacks, as it might be easily spoofed by
         an attacker. Hence, without extra security, the P-CSCF shouldn't trust the Via header for client identification
-        on requests and this module would require a fix or extension for this. Currently only pcscf_save() is safe from
+        on and this module would require a fix or extension for this. Currently only pcscf_save() is safe from
         this issue, while pcscf_save_pending() and pcscf_is_registered() seem to be using by default the top/first Via
         on requests, or the bottom/last Via on responses !!
+      </para>
+      <para>
+        See also the same parameter in the ims_qos module.
       </para>
       <para><emphasis>Default value is 0 (trust received-from IP and alias in Contact, and, unfortunaly somewhat wrongly
       top/bottom Via on requests/responses).</emphasis></para>
@@ -351,7 +356,7 @@ modparam("ims_registrar_pcscf", "delete_delay", 10)
         <title><varname>trust_bottom_via</varname> parameter usage</title>
         <programlisting format="linespecific">
 ...
-modparam("trust_bottom_via", "trust_bottom_via", 1)
+modparam("ims_registrar_pcscf", "trust_bottom_via", 1)
 ...
         </programlisting>
       </example>

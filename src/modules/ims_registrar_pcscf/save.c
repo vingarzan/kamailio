@@ -402,8 +402,10 @@ int save_pending(struct sip_msg *_m, udomain_t *_d)
 	// Received Info: First see trust_bottom_via exception, then try AVP,
 	// otherwise simply take the source of the request:
 	memset(&val, 0, sizeof(int_str));
-	if(trust_bottom_via && vb->received && vb->received->value.len > 0) {
-		ci.received_host = vb->received->value;
+	if(trust_bottom_via) {
+		if(vb->received && vb->received->value.len > 0) {
+			ci.received_host = vb->received->value;
+		}
 		if(vb->rport && vb->rport->value.len > 0) {
 			str2ushort(&vb->rport->value, &ci.received_port);
 		}
