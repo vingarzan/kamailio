@@ -404,7 +404,7 @@ int save_pending(struct sip_msg *_m, udomain_t *_d)
 	memset(&val, 0, sizeof(int_str));
 	if(trust_bottom_via) {
 		if(vb->received && vb->received->value.len > 0) {
-		ci.received_host = vb->received->value;
+			ci.received_host = vb->received->value;
 		}
 		if(vb->rport && vb->rport->value.len > 0) {
 			str2ushort(&vb->rport->value, &ci.received_port);
@@ -414,8 +414,8 @@ int save_pending(struct sip_msg *_m, udomain_t *_d)
 		}
 		ci.received_proto = vb->proto;
 	} else if(rcv_avp_name.n != 0
-			&& search_first_avp(rcv_avp_type, rcv_avp_name, &val, 0)
-			&& val.s.len > 0) {
+			  && search_first_avp(rcv_avp_type, rcv_avp_name, &val, 0)
+			  && val.s.len > 0) {
 		if(val.s.len > RECEIVED_MAX_SIZE) {
 			LM_ERR("received too long\n");
 			goto error;
