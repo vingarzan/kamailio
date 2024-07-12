@@ -1518,7 +1518,7 @@ int rx_avp_extract_mcc_mnc(str src, int *mcc, int *mnc, int *mnc_digits)
 }
 
 
-char unknown[20];
+char unknown[64];
 
 char *rx_avp_get_access_class(int32_t ip_can_type, int32_t rat_type)
 {
@@ -1601,7 +1601,8 @@ char *rx_avp_get_access_class(int32_t ip_can_type, int32_t rat_type)
 	switch(ip_can_type) {
 		case -1:
 		default:
-			snprintf(unknown, 20, "UNKNOWN-%d/%d", ip_can_type, rat_type);
+			snprintf(unknown, 64, "UNKNOWN-IP-CAN-Type-%d/RAT-Type-%d",
+					ip_can_type, rat_type);
 			return unknown;
 		case 1:
 			return "DOCSIS";
@@ -1667,18 +1668,17 @@ int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst)
 
 	// close to, but not really the access-class or access-type
 	cdp_avp->epcapp.get_IP_CAN_Type(rar->avpList, &ip_can_type, 0);
-	cdp_avp->epcapp.get_RAT_Type(rar->avpList, &ip_can_type, 0);
+	cdp_avp->epcapp.get_RAT_Type(rar->avpList, &rat_type, 0);
 	c_access_class = rx_avp_get_access_class(ip_can_type, rat_type);
 
-	if(!cdp_avp->epcapp.get_3GPP_User_Location_Info(rar->avpList, &data, 0)) {
-		memcpy(dst->s, c_access_class, strlen(c_access_class));
-		dst->len = strlen(c_access_class);
+	if(!cdp_avp->epcapp.get_3GPP_User_Location_Info(rar->avpList, &data, 0)
+			|| !data.len) {
+		// Fallback to IP-CAN-Type and RAT-Type
+		dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
+				"%s;network-provided", c_access_class);
 		return 1;
 	}
-	if(!data.len) {
-		LOG(L_ERR, "Got a 3GPP-User-Location-Info AVP with no content\n");
-		return 0;
-	}
+
 	uint8_t type = data.s[0];
 
 	// that's the payload length independent of what it says - first byte is flags
@@ -2016,15 +2016,13 @@ int rx_avp_process_3gpp_user_location_information(AAAMessage *rar, str *dst)
 	}
 
 	if(!dst->len) {
-		memcpy(dst->s, c_access_class, strlen(c_access_class));
-		dst->len = strlen(c_access_class);
-	}
-	if(dst->len) {
+		// Fallback to IP-CAN-Type and RAT-Type
 		dst->len += snprintf(dst->s + dst->len, MAX_PANI_LEN - dst->len,
-				";network-provided");
+				"%s;network-provided", c_access_class);
 	}
 
-	LOG(L_INFO, "P-Access-Network-Info from RAR is [%.*s]\n", dst->len, dst->s);
+	LOG(L_INFO, "P-Access-Network-Info from Diameter is [%.*s]\n", dst->len,
+			dst->s);
 	if(!dst->len) {
 		str_free(*dst, pkg);
 	}
